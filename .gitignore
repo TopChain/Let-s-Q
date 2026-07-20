@@ -1,0 +1,25 @@
+# Secrets and local signing material — never commit these.
+.env
+.env.*
+!.env.example
+*.jks
+*.keystore
+key.properties
+
+# Local and generated development files.
+.DS_Store
+node_modules/
+.pnpm-store/
+www/
+android/.gradle/
+android/build/
+android/app/build/
+android/app/src/main/assets/public/
+ios/App/App/public/
+ios/DerivedData/
+*.apk
+*.aab
+
+# Temporary rendering and operating-system files.
+tmp/
+*.log

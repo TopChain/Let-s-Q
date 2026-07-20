@@ -1,0 +1,27 @@
+{
+  "name": "lets-q",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Let’s Q shared Android, iOS, iPadOS, and web app",
+  "type": "module",
+  "scripts": {
+    "web:build": "node scripts/prepare-web.mjs",
+    "check": "node scripts/verify-foundation.mjs",
+    "cap:sync": "pnpm run web:build && cap sync",
+    "android:open": "pnpm run cap:sync && cap open android",
+    "ios:open": "pnpm run cap:sync && cap open ios"
+  },
+  "dependencies": {
+    "@capacitor/camera": "^8.0.0",
+    "@capacitor/core": "^8.0.0",
+    "@capacitor/preferences": "^8.0.0",
+    "@supabase/supabase-js": "^2.0.0",
+    "qrcode": "1.5.4"
+  },
+  "devDependencies": {
+    "@capacitor/android": "^8.0.0",
+    "@capacitor/cli": "^8.0.0",
+    "@capacitor/ios": "^8.0.0",
+    "esbuild": "0.25.11"
+  }
+}

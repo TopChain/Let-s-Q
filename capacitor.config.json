@@ -1,0 +1,12 @@
+{
+  "appId": "app.letsq.queue",
+  "appName": "Let's Q",
+  "webDir": "www",
+  "bundledWebRuntime": false,
+  "android": {
+    "backgroundColor": "#12383f"
+  },
+  "ios": {
+    "contentInset": "automatic"
+  }
+}
