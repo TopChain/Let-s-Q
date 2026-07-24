@@ -722,7 +722,7 @@ function addWalkin(){appState.waiting.push({number:14,code:'PEACH8',note:'Walk-i
 function selectScore(btn){btn.parentElement.querySelectorAll('button').forEach(b=>b.classList.remove('active'));btn.classList.add('active')}
 function setTheme(a,b,el){appState.accent=a;appState.accent2=b;document.documentElement.style.setProperty('--brand',a);document.documentElement.style.setProperty('--brand-2',b);el.parentElement.querySelectorAll('.theme-choice').forEach(x=>x.classList.remove('active'));el.classList.add('active');showToast('App accent updated')}
 function toggleDark(btn){appState.dark=!appState.dark;document.body.classList.toggle('dark',appState.dark);btn.classList.toggle('on',appState.dark)}
-function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(window.toastTimer);window.toastTimer=setTimeout(()=>t.classList.remove('show'),2600)}
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(window.toastTimer);window.toastTimer=setTimeout(()=>t.classList.remove('show'),4600)}
 
 document.querySelectorAll('.swatches').forEach(group=>group.addEventListener('click',e=>{const s=e.target.closest('.swatch');if(!s)return;group.querySelectorAll('.swatch').forEach(x=>x.classList.remove('selected'));s.classList.add('selected');if(group.id==='personalSwatches')appState.selectedPersonal=s.dataset.color;if(group.id==='hostSwatches')appState.selectedHost=s.dataset.color}));
 document.querySelectorAll('.policy-option').forEach(o=>o.addEventListener('click',()=>{document.querySelectorAll('.policy-option').forEach(x=>x.classList.remove('selected'));o.classList.add('selected')}));

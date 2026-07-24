@@ -1,6 +1,8 @@
 package app.letsq.queue;
 
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.content.pm.ApplicationInfo;
 import android.view.Gravity;
 import android.view.ViewGroup;
@@ -68,6 +70,7 @@ public class MainActivity extends BridgeActivity implements PurchasesUpdatedList
     private boolean appOpenShowing = false;
     private boolean appOpenShownForSession = false;
     private boolean reportRewardLoading = false;
+    private int reportRewardLoadAttempts = 0;
     private com.getcapacitor.PluginCall pendingReportRewardCall;
     private int bannerInsetPx = 0;
     private BillingClient billingClient;
@@ -315,6 +318,7 @@ public class MainActivity extends BridgeActivity implements PurchasesUpdatedList
                 public void onAdLoaded(RewardedAd ad) {
                     reportRewardedAd = ad;
                     reportRewardLoading = false;
+                    reportRewardLoadAttempts = 0;
                     if (pendingReportRewardCall != null) {
                         com.getcapacitor.PluginCall pending = pendingReportRewardCall;
                         pendingReportRewardCall = null;
@@ -327,8 +331,17 @@ public class MainActivity extends BridgeActivity implements PurchasesUpdatedList
                     reportRewardedAd = null;
                     reportRewardLoading = false;
                     if (pendingReportRewardCall != null) {
-                        pendingReportRewardCall.reject("No report reward is available right now. Please try again shortly.");
-                        pendingReportRewardCall = null;
+                        if (reportRewardLoadAttempts < 2) {
+                            reportRewardLoadAttempts++;
+                            new Handler(Looper.getMainLooper()).postDelayed(
+                                MainActivity.this::loadReportRewarded,
+                                2000
+                            );
+                        } else {
+                            pendingReportRewardCall.reject("No report reward is available right now. Please try again shortly.");
+                            pendingReportRewardCall = null;
+                            reportRewardLoadAttempts = 0;
+                        }
                     }
                 }
             }
