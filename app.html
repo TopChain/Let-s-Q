@@ -56,7 +56,7 @@
   .phone:before{content:"";position:absolute;z-index:20;top:8px;left:50%;transform:translateX(-50%);width:112px;height:27px;border-radius:18px;background:#07101F}
   .app-shell{height:100%;display:flex;flex-direction:column;overflow:hidden;background:var(--cloud)}
   .topbar{height:112px;padding:10px 18px;display:flex;align-items:center;justify-content:space-between;position:relative;background:color-mix(in srgb,var(--surface) 92%,transparent);border-bottom:1px solid var(--line);backdrop-filter:blur(16px);z-index:5}
-  .brand-mini{width:clamp(150px,42vw,250px);height:88px;display:flex;align-items:center;overflow:hidden;min-width:0}
+  .brand-mini{width:clamp(150px,42vw,250px);height:88px;display:flex;align-items:center;overflow:hidden;min-width:0;transform:translateY(10px)}
   .brand-mini img{width:100%;height:88px;object-fit:cover;object-position:center}
   .page-title{position:absolute;left:50%;transform:translateX(-50%);max-width:calc(100% - 410px);font-family:Poppins,Inter,sans-serif;font-size:17px;font-weight:750;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}
   .top-actions{display:flex;align-items:center;gap:8px}
@@ -312,7 +312,7 @@
           <div class="page-title" id="pageTitle">Q Home</div>
         </div>
         <div class="top-actions">
-          <button class="icon-btn" aria-label="Language" onclick="showToast('Language selector: English / 繁體中文 / 简体中文 / Español / 日本語 / 한국어')">
+          <button class="icon-btn" aria-label="Language" onclick="openModal('language')">
             <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.4 2.5 3.7 5.5 3.7 9S14.4 18.5 12 21M12 3C9.6 5.5 8.3 8.5 8.3 12s1.3 6.5 3.7 9"/></svg>
           </button>
           <button class="icon-btn" aria-label="Notifications" onclick="showToast('No new notifications')">
@@ -690,6 +690,10 @@ function subscribeToReports(){
 
 function openModal(type){
  const content=document.getElementById('modalContent');
+ if(type==='language'){
+  content.innerHTML=`<div class="modal-handle"></div><div class="modal-head"><h3>Choose language</h3><button class="modal-close" onclick="closeModal()">×</button></div><p class="subtitle">Choose the language you want Let’s Q to use.</p><div class="stack"><button class="btn secondary wide" onclick="setLanguage('English')">English</button><button class="btn secondary wide" onclick="setLanguage('繁體中文')">繁體中文</button><button class="btn secondary wide" onclick="setLanguage('简体中文')">简体中文</button><button class="btn secondary wide" onclick="setLanguage('Español')">Español</button><button class="btn secondary wide" onclick="setLanguage('日本語')">日本語</button><button class="btn secondary wide" onclick="setLanguage('한국어')">한국어</button></div>`;
+  document.getElementById('modalBackdrop').classList.add('show');return;
+ }
  if(type==='privacy'){
   content.innerHTML=`<div class="modal-handle"></div><div class="modal-head"><h3>Your privacy in Let’s Q</h3><button class="modal-close" onclick="closeModal()">×</button></div><div class="privacy-strip"><span class="privacy-lock">🔒</span><span><b>Anonymous by default</b>Guests join with a ticket number and a private passphrase—never a name, phone number, email, account, or profile.</span></div><div class="stack"><div class="card" style="margin:0"><b style="font-size:13px">What hosts can see</b><p class="subtitle" style="margin:6px 0 0">Ticket number, passphrase, and an optional service note supplied by the guest.</p></div><div class="card" style="margin:0"><b style="font-size:13px">What reports contain</b><p class="subtitle" style="margin:6px 0 0">Only aggregate counts, timing, and anonymous satisfaction scores.</p></div><div class="card" style="margin:0"><b style="font-size:13px">This local demo</b><p class="subtitle" style="margin:6px 0 0">Runs entirely from files in this folder. It makes no network requests and creates no guest account.</p></div></div><button class="btn primary wide" style="margin-top:14px" onclick="closeModal()">Got it</button>`;
   document.getElementById('modalBackdrop').classList.add('show'); return;
@@ -717,6 +721,7 @@ function openModal(type){
 }
 function closeModal(){document.getElementById('modalBackdrop').classList.remove('show')}
 function backdropClose(e){if(e.target.id==='modalBackdrop')closeModal()}
+function setLanguage(language){appState.language=language;closeModal();showToast(`${language} selected. Full translation is being added next.`)}
 function cancelTicket(){const q=appState.queues.find(q=>q.id===2);if(q){q.status='history';q.meta='Cancelled by you'}closeModal();switchTab('list');showToast('Ticket 012 cancelled')}
 function addWalkin(){appState.waiting.push({number:14,code:'PEACH8',note:'Walk-in ticket',time:'now'});closeModal();renderHostQueue();showToast('Walk-in ticket 014 created')}
 function selectScore(btn){btn.parentElement.querySelectorAll('button').forEach(b=>b.classList.remove('active'));btn.classList.add('active')}

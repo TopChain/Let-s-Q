@@ -338,7 +338,7 @@ public class MainActivity extends BridgeActivity implements PurchasesUpdatedList
                                 2000
                             );
                         } else {
-                            pendingReportRewardCall.reject("No report reward is available right now. Please try again shortly.");
+                            pendingReportRewardCall.reject("No report reward is available right now (AdMob error " + error.getCode() + "). Please try again shortly.");
                             pendingReportRewardCall = null;
                             reportRewardLoadAttempts = 0;
                         }
@@ -363,7 +363,17 @@ public class MainActivity extends BridgeActivity implements PurchasesUpdatedList
                     return;
                 }
                 pendingReportRewardCall = call;
+                reportRewardLoadAttempts = 0;
                 loadReportRewarded();
+                // An emulator can occasionally leave an ad request pending after
+                // it resumes. Refresh the request once instead of leaving the
+                // report button stuck on "Loading" forever.
+                new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                    if (pendingReportRewardCall == call && reportRewardedAd == null) {
+                        reportRewardLoading = false;
+                        loadReportRewarded();
+                    }
+                }, 6000);
                 return;
             }
 
@@ -379,7 +389,7 @@ public class MainActivity extends BridgeActivity implements PurchasesUpdatedList
 
                 @Override
                 public void onAdFailedToShowFullScreenContent(AdError error) {
-                    call.reject("The report reward could not be shown. Please try again.");
+                    call.reject("The report reward could not be shown (AdMob error " + error.getCode() + "). Please try again.");
                     loadReportRewarded();
                 }
             });
