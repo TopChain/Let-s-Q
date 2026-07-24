@@ -507,14 +507,14 @@
               </div>
               <div class="privacy-strip" style="margin:0"><span class="privacy-lock">🔒</span><span><b>Guest privacy is locked in</b>This queue never asks guests for contact details. Hosts see ticket numbers, optional service notes, and aggregate metrics only.</span></div>
             </div>
-            <button class="btn primary wide" onclick="publishEvent()">Publish queue & open Host</button>
+            <button class="btn primary wide" id="hostSetupSubmit" onclick="publishEvent()">Publish queue & open Host</button>
           </div>
 
         </div>
 
         <!-- HOST -->
         <div class="screen" id="screen-host">
-          <div class="row between" style="margin-bottom:10px"><div><div class="eyebrow">Host</div><h2 class="title" style="margin-bottom:0" id="hostEventTitle">Riverside Expo</h2></div><button class="btn secondary small" id="pauseBtn" onclick="togglePause()">Pause scans</button></div>
+          <div class="row between" style="margin-bottom:10px"><div><div class="eyebrow">Host</div><h2 class="title" style="margin-bottom:0" id="hostEventTitle">Riverside Expo</h2></div><div class="row" style="gap:6px"><button class="btn ghost small" onclick="openHostSetup()">Edit setup</button><button class="btn secondary small" id="pauseBtn" onclick="togglePause()">Pause scans</button></div></div>
           <p class="subtitle">Booth 3 · Live queue management</p>
           <div class="segmented"><button class="active">Photo Queue</button><button onclick="showToast('Switched to Prize Pickup queue')">Prize Pickup</button><button onclick="showToast('Maximum two queues per booth')">+ Add</button></div>
           <div class="grid-3">
@@ -539,7 +539,7 @@
           </div>
           <div class="grid-2">
             <button class="btn ghost" onclick="openModal('staff')">Pair staff device</button>
-            <button class="btn ghost" onclick="openModal('settings')">Queue settings</button>
+            <button class="btn ghost" onclick="openModal('settings')">Edit queue settings</button>
             <button class="btn ghost" onclick="showToast('QR print preview prepared for A4 / Letter')">Print QR sheet</button>
             <button class="btn danger" onclick="openModal('closeQueue')">Close queue</button>
           </div>
@@ -576,7 +576,7 @@
 <script>
 const appState={
   tab:'home', accent:'#006BFF', accent2:'#00B8FF', dark:false, paused:false,
-  selectedPersonal:'#006BFF', selectedHost:'#006BFF', reportUnlocked:false, subscribed:false, infiniteTarget:false,
+  selectedPersonal:'#006BFF', selectedHost:'#006BFF', reportUnlocked:false, subscribed:false, infiniteTarget:false, hostQueuePublished:false,
   serving:9, served:21,
   waiting:[
     {number:10,code:'MANGO7',note:'Wheelchair access needed.',time:'1m'},
@@ -595,6 +595,7 @@ const titles={queuer:'Queuer',list:'Q List',home:'Q Home',host:'Host',report:'Q 
 
 function switchTab(tab){
   if(tab==='report'&&!appState.reportUnlocked){openReportAd();return}
+  if(tab==='host'&&!appState.hostQueuePublished){openHostSetup();return}
   appState.tab=tab;
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById('screen-'+tab).classList.add('active');
@@ -607,6 +608,9 @@ function switchTab(tab){
 function setQueuerView(view){document.querySelectorAll('#screen-queuer .flow-view').forEach(v=>v.style.display='none');document.getElementById('queuer-'+view).style.display='block';document.getElementById('content').scrollTop=0}
 function showEventPreview(){setQueuerView('preview')}
 function setHomeView(view){document.querySelectorAll('#screen-home .home-view').forEach(v=>v.style.display='none');document.getElementById('home-'+view).style.display='block';document.getElementById('content').scrollTop=0}
+function openHostSetup(){
+  appState.tab='home';document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById('screen-home').classList.add('active');document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.tab==='host'));document.getElementById('pageTitle').textContent='Host setup';setHomeView('setup');document.getElementById('hostSetupSubmit').textContent=appState.hostQueuePublished?'Save changes & return to Host':'Publish queue & open Host';
+}
 function joinQueue(){
   const code=(document.getElementById('secretCode').value||'MANGO7').toUpperCase();
   document.getElementById('ticketSecret').textContent=code;
@@ -647,7 +651,7 @@ function publishEvent(){
   if(!e||!store||!q||!start||!end){showToast('Add the event, store, queue, and schedule');return}
   if(new Date(end)<=new Date(start)){showToast('End date and time must be after the start');return}
   if(!appState.infiniteTarget&&(!Number.isFinite(+document.getElementById('orderTarget').value)||+document.getElementById('orderTarget').value<1)){showToast('Enter an order target or choose Infinite');return}
-  document.getElementById('hostEventTitle').textContent=store;setHomeView('main');switchTab('host');showToast(`${q} published for ${appState.infiniteTarget?'an unlimited':'a '+document.getElementById('orderTarget').value+' order'} queue`)
+  const wasPublished=appState.hostQueuePublished;appState.hostQueuePublished=true;document.getElementById('hostEventTitle').textContent=store;setHomeView('main');switchTab('host');showToast(wasPublished?`${q} settings saved`:`${q} published for ${appState.infiniteTarget?'an unlimited':'a '+document.getElementById('orderTarget').value+' order'} queue`)
 }
 
 function previewStorePhoto(event){const file=event.target.files&&event.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=()=>{document.getElementById('storePhotoPreview').innerHTML=`<img src="${reader.result}" alt="Store photo preview">`};reader.readAsDataURL(file)}

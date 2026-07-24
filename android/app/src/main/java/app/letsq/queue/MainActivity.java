@@ -68,6 +68,7 @@ public class MainActivity extends BridgeActivity implements PurchasesUpdatedList
     private boolean appOpenShowing = false;
     private boolean appOpenShownForSession = false;
     private boolean reportRewardLoading = false;
+    private com.getcapacitor.PluginCall pendingReportRewardCall;
     private int bannerInsetPx = 0;
     private BillingClient billingClient;
     private boolean adFreeActive = false;
@@ -314,12 +315,21 @@ public class MainActivity extends BridgeActivity implements PurchasesUpdatedList
                 public void onAdLoaded(RewardedAd ad) {
                     reportRewardedAd = ad;
                     reportRewardLoading = false;
+                    if (pendingReportRewardCall != null) {
+                        com.getcapacitor.PluginCall pending = pendingReportRewardCall;
+                        pendingReportRewardCall = null;
+                        showReportReward(pending);
+                    }
                 }
 
                 @Override
                 public void onAdFailedToLoad(LoadAdError error) {
                     reportRewardedAd = null;
                     reportRewardLoading = false;
+                    if (pendingReportRewardCall != null) {
+                        pendingReportRewardCall.reject("No report reward is available right now. Please try again shortly.");
+                        pendingReportRewardCall = null;
+                    }
                 }
             }
         );
@@ -335,8 +345,12 @@ public class MainActivity extends BridgeActivity implements PurchasesUpdatedList
                 return;
             }
             if (reportRewardedAd == null) {
+                if (pendingReportRewardCall != null) {
+                    call.reject("A report reward is already being prepared.");
+                    return;
+                }
+                pendingReportRewardCall = call;
                 loadReportRewarded();
-                call.reject("The report reward is loading. Please try again in a moment.");
                 return;
             }
 
