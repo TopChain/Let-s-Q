@@ -23,7 +23,8 @@ create table public.queues (
   queue_name text not null check (char_length(queue_name) between 1 and 40),
   starts_at timestamptz,
   ends_at timestamptz,
-  capacity integer not null default 8 check (capacity between 1 and 100),
+  capacity integer check (capacity is null or capacity >= 1),
+  target_orders integer check (target_orders is null or target_orders >= 1),
   no_show_policy text not null default 'defer' check (no_show_policy in ('cancel', 'defer', 'hold')),
   hold_minutes integer not null default 5 check (hold_minutes between 1 and 30),
   next_ticket_number integer not null default 1,
@@ -181,7 +182,7 @@ begin
 
   select count(*) into v_active_count from public.tickets
   where queue_id = v_queue.id and status in ('waiting', 'called', 'ready', 'hold');
-  if v_active_count >= v_queue.capacity then raise exception 'This queue is full.'; end if;
+  if v_queue.capacity is not null and v_active_count >= v_queue.capacity then raise exception 'This queue is full.'; end if;
 
   insert into public.tickets (queue_id, ticket_number, queue_order, secret_code_hash, private_note)
   values (v_queue.id, v_queue.next_ticket_number, v_queue.next_queue_order, extensions.crypt(v_code, extensions.gen_salt('bf')), nullif(trim(p_private_note), ''))

@@ -10,11 +10,14 @@ This folder is now prepared as one Capacitor project. The same `index.html`, CSS
 - A strong random ticket access token instead of using a short secret code as authorization.
 - Data model for anonymous ratings and store-verified paid entitlements.
 
-## What still needs your account before it can be live
+## What still needs account-side confirmation before it can be live
 
-1. Create a Supabase project. We will apply `supabase/schema.sql` there and add only its public URL and anonymous key to `runtime-config.js`.
-2. Create Google Play and Apple Developer accounts later, after phone testing works.
-3. Configure Apple and Google billing products for the $1/month plan. Receipt verification must be done by a secure server, never in `runtime-config.js`.
+1. The public Supabase URL and publishable key are now configured in `runtime-config.js`; confirm the schema and migrations have been applied in that project and review every Row Level Security policy.
+2. Configure the production Netlify deploy using `netlify.toml`, then verify the deployed privacy and deletion pages.
+3. Create the Google Play billing product for the $1/month plan. Receipt verification must be done by a secure server, never in `runtime-config.js`.
+4. Create the Apple equivalents before an iOS release.
+
+For the account-side checklist and release order, see `docs/GO_LIVE_SETUP.md`.
 
 ## Important privacy boundary
 

@@ -22,18 +22,50 @@
 
   const hostQueueKey = 'lets-q-live-host-queue-id';
   const ticketKey = 'lets-q-live-ticket';
+  const ticketsKey = 'lets-q-live-tickets';
   const saved = (key) => { try { return JSON.parse(localStorage.getItem(key) || 'null'); } catch { return null; } };
   const save = (key, value) => localStorage.setItem(key, JSON.stringify(value));
   const remove = (key) => localStorage.removeItem(key);
   const text = (error, fallback) => error?.message || fallback;
   const time = (iso) => iso ? new Date(iso).toTimeString().slice(0, 5) : '00:00';
-  const isoToday = (value) => {
-    const [hour, minute] = String(value).split(':').map(Number);
-    const date = new Date();
-    date.setHours(hour, minute, 0, 0);
-    return date.toISOString();
+  const isoDateTime = (dateValue, timeValue) => new Date(`${dateValue}T${timeValue}:00`).toISOString();
+  const date = (iso) => {
+    if (!iso) return '';
+    const value = new Date(iso);
+    const offset = value.getTimezoneOffset() * 60000;
+    return new Date(value.getTime() - offset).toISOString().slice(0, 10);
   };
   const isUuid = (value) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value || '');
+
+  function savedTickets() {
+    const many = saved(ticketsKey);
+    const list = Array.isArray(many) ? many : [];
+    const legacy = saved(ticketKey);
+    if (legacy?.accessToken && !list.some((ticket) => ticket.accessToken === legacy.accessToken)) list.push(legacy);
+    return list;
+  }
+
+  function saveTickets(tickets) {
+    save(ticketsKey, tickets);
+    const selected = tickets.find((ticket) => ticket.accessToken === state.selectedLiveTicket) || tickets[0] || null;
+    if (selected) save(ticketKey, selected); else remove(ticketKey);
+    state.myTickets = tickets;
+  }
+
+  function selectedTicket() {
+    const tickets = savedTickets();
+    return tickets.find((ticket) => ticket.accessToken === state.selectedLiveTicket)
+      || tickets.find((ticket) => ticket.publicId === state.livePublicQueueId)
+      || null;
+  }
+
+  function upsertTicket(ticket) {
+    const tickets = savedTickets();
+    const index = tickets.findIndex((savedTicket) => savedTicket.accessToken === ticket.accessToken);
+    if (index >= 0) tickets[index] = { ...tickets[index], ...ticket };
+    else tickets.unshift(ticket);
+    saveTickets(tickets);
+  }
 
   function liveQueuePayload() {
     if (!state.livePublicQueueId) return '';
@@ -74,11 +106,12 @@
     state.liveActiveCount = queue.active_count;
     state.booth = queue.booth_name;
     state.queue = queue.queue_name;
-    state.capacity = Number(queue.capacity);
+    state.capacity = queue.capacity === null || queue.capacity === undefined ? Infinity : Number(queue.capacity);
+    state.serviceTarget = queue.target_orders ?? state.serviceTarget ?? null;
     state.policy = queue.no_show_policy;
     if (queue.hold_minutes) state.holdMinutes = Number(queue.hold_minutes);
-    if (queue.starts_at) state.startTime = time(queue.starts_at);
-    if (queue.ends_at) state.endTime = time(queue.ends_at);
+    if (queue.starts_at) { state.startDate = date(queue.starts_at); state.startTime = time(queue.starts_at); }
+    if (queue.ends_at) { state.endDate = date(queue.ends_at); state.endTime = time(queue.ends_at); }
     if (queue.now_serving !== undefined) state.now = Number(queue.now_serving || 0);
     void refreshLiveQr();
   }
@@ -111,7 +144,7 @@
     if (!id) return false;
     await releaseExpiredHolds();
     const { data: queue, error: queueError } = await api.from('queues')
-      .select('id,public_id,join_code,booth_name,queue_name,starts_at,ends_at,capacity,no_show_policy,hold_minutes,next_queue_order,status')
+      .select('id,public_id,join_code,booth_name,queue_name,starts_at,ends_at,capacity,target_orders,no_show_policy,hold_minutes,next_queue_order,status')
       .eq('id', id).maybeSingle();
     if (queueError || !queue) {
       remove(hostQueueKey);
@@ -144,12 +177,12 @@
     const queue = Array.isArray(data) ? data[0] : data;
     if (error || !queue) throw new Error(text(error, 'This queue is unavailable.'));
 
-    // Keep a completed ticket for this same queue so its owner can still leave
-    // an anonymous rating. They can explicitly choose "Join again" afterwards.
-    const savedTicket = saved(ticketKey);
-    if (savedTicket?.publicId && savedTicket.publicId !== publicId) {
-      // The person deliberately opened a different Host queue. Keep that
-      // destination selected instead of letting an older saved ticket replace it.
+    // Opening a different queue prepares a new ticket without deleting any
+    // existing saved tickets. A Queuer can therefore hold places in more than
+    // one line on the same private device.
+    const savedTicket = selectedTicket();
+    if (savedTicket?.publicId !== publicId) {
+      state.selectedLiveTicket = null;
       state.my = null;
       state.rated = false;
     }
@@ -176,7 +209,7 @@
   }
 
   async function refreshTicket(showError = false) {
-    const ticket = saved(ticketKey);
+    const ticket = selectedTicket();
     if (!ticket?.accessToken) return false;
     // A QR scan or manual code may have just opened another queue. Its view
     // must never be replaced by this device's ticket from a previous queue.
@@ -187,32 +220,55 @@
       if (showError) window.toast(text(error, 'Could not refresh your ticket.'));
       return false;
     }
-    state.livePublicQueueId = ticket.publicId;
-    state.my = { n: current.ticket_number, code: ticket.code, state: current.status, attempts: 0, note: '' };
+    const updatedTicket = { ...ticket, status: current.status, ticketNumber: current.ticket_number, boothName: current.booth_name, queueName: current.queue_name };
+    upsertTicket(updatedTicket);
+    state.selectedLiveTicket = updatedTicket.accessToken;
+    state.livePublicQueueId = updatedTicket.publicId;
+    state.my = { n: current.ticket_number, code: updatedTicket.code, state: current.status, attempts: 0, note: '' };
     state.booth = current.booth_name;
     state.queue = current.queue_name;
-    try { await openLiveQueue(ticket.publicId, false); } catch { window.render(); }
+    try { await openLiveQueue(updatedTicket.publicId, false); } catch { window.render(); }
     return true;
+  }
+
+  async function refreshSavedTickets(showError = false) {
+    const tickets = savedTickets();
+    if (!tickets.length) { state.myTickets = []; window.render(); return []; }
+    const refreshed = await Promise.all(tickets.map(async (ticket) => {
+      try {
+        const { data, error } = await api.rpc('get_my_ticket', { p_access_token: ticket.accessToken });
+        const current = Array.isArray(data) ? data[0] : data;
+        if (error || !current) return ticket;
+        return { ...ticket, status: current.status, ticketNumber: current.ticket_number, boothName: current.booth_name, queueName: current.queue_name };
+      } catch { return ticket; }
+    }));
+    saveTickets(refreshed);
+    if (showError && !refreshed.length) window.toast('Could not refresh your saved queues.');
+    window.render();
+    return refreshed;
   }
 
   async function saveHostSetup() {
     const booth = document.querySelector('#setup-booth').value.trim();
     const queueName = document.querySelector('#setup-queue').value.trim();
+    const startDate = document.querySelector('#setup-start-date')?.value;
+    const endDate = document.querySelector('#setup-end-date')?.value;
     const startTime = document.querySelector('#setup-start').value;
     const endTime = document.querySelector('#setup-end').value;
-    const capacity = Number(document.querySelector('#setup-capacity').value);
+    const targetOrders = Number(document.querySelector('#setup-service-target')?.value || 0) || null;
     const selected = document.querySelector('input[name="noShowPolicy"]:checked');
     if (!booth || !queueName) throw new Error('Add both a booth/event name and a queue name.');
-    if (!Number.isInteger(capacity) || capacity < 1 || capacity > 100) throw new Error('Capacity must be between 1 and 100.');
-    if (!startTime || !endTime || startTime >= endTime) throw new Error('Choose an end time later than the start time.');
+    if (!startDate || !endDate || !startTime || !endTime) throw new Error('Choose a start and end date and time.');
+    if (startDate > endDate || (startDate === endDate && startTime >= endTime)) throw new Error('Choose an end date and time later than the start.');
+    if (targetOrders !== null && (!Number.isInteger(targetOrders) || targetOrders < 1)) throw new Error('Planned orders must be a whole number.');
     const ownerId = await ensureHost();
     // Restore a saved queue before deciding whether this is a brand-new one.
     // Without this, reopening the app and pressing Start could create a second
     // queue while its older QR code was still in use.
     if (!state.liveHostQueueId && saved(hostQueueKey)) await refreshHost(false);
     const values = {
-      booth_name: booth, queue_name: queueName, starts_at: isoToday(startTime), ends_at: isoToday(endTime),
-      capacity, no_show_policy: selected?.value || 'defer', hold_minutes: Math.max(1, Math.min(30, Number(document.querySelector('#hold-minutes').value) || 5)), status: 'open'
+      booth_name: booth, queue_name: queueName, starts_at: isoDateTime(startDate, startTime), ends_at: isoDateTime(endDate, endTime),
+      capacity: null, target_orders: targetOrders, no_show_policy: selected?.value || 'defer', hold_minutes: Math.max(1, Math.min(30, Number(document.querySelector('#hold-minutes').value) || 5)), status: 'open'
     };
     let result;
     if (state.liveHostQueueId) {
@@ -305,7 +361,9 @@
       const { data, error } = await api.rpc('join_queue', { p_public_queue_id: state.livePublicQueueId, p_secret_code: code, p_private_note: note || null });
       const ticket = Array.isArray(data) ? data[0] : data;
       if (error || !ticket) throw new Error(text(error, 'Could not join this queue.'));
-      save(ticketKey, { accessToken: ticket.access_token, publicId: state.livePublicQueueId, code });
+      const record = { accessToken: ticket.access_token, publicId: state.livePublicQueueId, code, ticketNumber: ticket.ticket_number, status: ticket.ticket_status, boothName: state.booth, queueName: state.queue };
+      state.selectedLiveTicket = record.accessToken;
+      upsertTicket(record);
       state.my = { n: ticket.ticket_number, code, state: ticket.ticket_status, attempts: 0, note: '' };
       state.liveActiveCount = Number(state.liveActiveCount || 0) + 1;
       window.render();
@@ -315,17 +373,18 @@
 
   window.cancelMine = async () => {
     try {
-      const ticket = saved(ticketKey);
+      const ticket = selectedTicket();
       if (!ticket?.accessToken) return;
       const { error } = await api.rpc('cancel_my_ticket', { p_access_token: ticket.accessToken });
       if (error) throw error;
+      upsertTicket({ ...ticket, status: 'cancelled' });
       state.my.state = 'cancelled';
       window.render();
       window.toast('Ticket cancelled. Its optional note was removed.');
     } catch (error) { window.toast(text(error, 'Could not cancel this ticket.')); }
   };
 
-  window.startNewTicket = () => { remove(ticketKey); state.my = null; state.rated = false; window.render(); };
+  window.startNewTicket = () => { state.selectedLiveTicket = null; state.my = null; state.rated = false; window.render(); };
 
   async function loadQueueHistory() {
     const { data, error } = await api.from('queues')
@@ -405,7 +464,7 @@
 
   window.submitRating = async () => {
     try {
-      const ticket = saved(ticketKey);
+      const ticket = selectedTicket();
       const wait = document.querySelector('input[name="wait-rating"]:checked');
       const service = document.querySelector('input[name="service-rating"]:checked');
       const again = document.querySelector('input[name="return-rating"]:checked');
@@ -413,7 +472,7 @@
       const { error } = await api.rpc('submit_anonymous_rating', { p_access_token: ticket.accessToken, p_wait_score: Number(wait.value), p_service_score: Number(service.value), p_return_score: Number(again.value) });
       if (error) throw error;
       state.rated = true;
-      window.render(); window.goTo('queuer'); window.toast('Thank you. Your anonymous rating was added.');
+      window.render(); window.goTo('queuer'); window.toast('Thank you. Your anonymous rating was added.'); window.showRatingInterstitial?.();
     } catch (error) { window.toast(text(error, 'Could not submit this rating.')); }
   };
 
@@ -430,6 +489,8 @@
       await openLiveQueue(id);
     } catch (error) { window.toast(text(error, 'That is not a live Let’s Q queue QR.')); }
   };
+
+  window.refreshSavedTickets = () => refreshSavedTickets(true);
 
   window.useDemoQueue = async () => {
     const value = window.prompt('Paste a Host queue link or enter a code like Q7K2M9.');
@@ -452,6 +513,7 @@
       });
     }
     if (view === 'queuer') refreshTicket();
+    if (view === 'q-list') refreshSavedTickets();
     if (view === 'report') {
       loadQueueHistory()
         .then(() => loadAnalytics())
@@ -505,7 +567,9 @@
       actions?.insertAdjacentHTML('beforeend', '<button class="button danger" data-end-live-queue onclick="endLiveQueue()">End queue</button>');
     }
     renderLiveAnalytics();
+    window.localizePage?.();
   };
+  state.myTickets = savedTickets();
   window.render();
 
   const pathParts = window.location.pathname.split('/').filter(Boolean);

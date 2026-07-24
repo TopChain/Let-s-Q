@@ -7,8 +7,8 @@ android {
         applicationId "app.letsq.queue"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode 3
+        versionName "1.2"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -19,7 +19,7 @@ android {
     buildTypes {
         release {
             minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
 }
@@ -40,6 +40,16 @@ dependencies {
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
     implementation project(':capacitor-cordova-android-plugins')
+    // Native Google ads. Debug builds use Google's sample ad unit so we never
+    // generate live impressions while testing on a phone or emulator.
+    implementation 'com.google.android.gms:play-services-ads:25.4.0'
+    // Shows a consent form when one is required and provides a Privacy choices
+    // entry point for regions where it is required.
+    implementation 'com.google.android.ump:user-messaging-platform:4.0.0'
+    // Google Play Billing powers the optional $1/month ad-free plan.  Version 8
+    // meets Play's current Billing Library requirement while retaining the Java
+    // APIs used by our Capacitor bridge.
+    implementation 'com.android.billingclient:billing:8.1.0'
 }
 
 apply from: 'capacitor.build.gradle'

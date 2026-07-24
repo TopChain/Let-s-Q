@@ -7,9 +7,13 @@ const root = resolve(import.meta.dirname, '..');
 const output = resolve(root, 'www');
 const publicFiles = [
   'index.html',
+  'app.html',
   'privacy.html',
   'delete-data.html',
   'runtime-config.js',
+  'app-ads.txt',
+  'i18n-extra.js',
+  'app-shell.js',
   'live-queue.js',
   '_redirects',
   "Let's Q Web logo.jpeg",
@@ -26,6 +30,10 @@ const vendorFiles = [
   {
     source: resolve(root, 'vendor/qrcode.js'),
     destination: 'vendor/qrcode.js'
+  },
+  {
+    source: resolve(root, 'vendor/qr-scanner.js'),
+    destination: 'vendor/qr-scanner.js'
   }
 ];
 
