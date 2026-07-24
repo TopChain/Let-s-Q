@@ -19,6 +19,10 @@ import com.google.android.gms.ads.LoadAdError;
 import com.google.android.gms.ads.MobileAds;
 import com.google.android.gms.ads.interstitial.InterstitialAd;
 import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback;
+import com.google.android.gms.ads.appopen.AppOpenAd;
+import com.google.android.gms.ads.appopen.AppOpenAd.AppOpenAdLoadCallback;
+import com.google.android.gms.ads.rewarded.RewardedAd;
+import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback;
 import com.google.android.ump.ConsentInformation;
 import com.google.android.ump.ConsentRequestParameters;
 import com.google.android.ump.UserMessagingPlatform;
@@ -44,13 +48,26 @@ public class MainActivity extends BridgeActivity implements PurchasesUpdatedList
     // This is shown only after a queuer voluntarily submits an experience rating.
     private static final String LIVE_RATING_INTERSTITIAL_AD_UNIT_ID = "ca-app-pub-5866109338835517/3499945620";
     private static final String TEST_RATING_INTERSTITIAL_AD_UNIT_ID = "ca-app-pub-3940256099942544/1033173712";
+    // App Open appears only once per app session. The ad itself controls when
+    // it can be closed; Let’s Q never adds a forced countdown over it.
+    private static final String LIVE_APP_OPEN_AD_UNIT_ID = "ca-app-pub-5866109338835517/9877074724";
+    private static final String TEST_APP_OPEN_AD_UNIT_ID = "ca-app-pub-3940256099942544/9257395921";
+    // Hosts earn a one-session Q Report unlock after AdMob confirms reward.
+    private static final String LIVE_REPORT_REWARDED_AD_UNIT_ID = "ca-app-pub-5866109338835517/8169507310";
+    private static final String TEST_REPORT_REWARDED_AD_UNIT_ID = "ca-app-pub-3940256099942544/5224354917";
     // This must exactly match the immutable product ID created in Play Console.
     private static final String AD_FREE_PRODUCT_ID = "letsq_ad_free_monthly";
 
     private AdView bannerAd;
     private InterstitialAd ratingInterstitialAd;
+    private AppOpenAd appOpenAd;
+    private RewardedAd reportRewardedAd;
     private boolean mobileAdsStarted = false;
     private boolean interstitialLoading = false;
+    private boolean appOpenLoading = false;
+    private boolean appOpenShowing = false;
+    private boolean appOpenShownForSession = false;
+    private boolean reportRewardLoading = false;
     private int bannerInsetPx = 0;
     private BillingClient billingClient;
     private boolean adFreeActive = false;
@@ -128,6 +145,8 @@ public class MainActivity extends BridgeActivity implements PurchasesUpdatedList
         MobileAds.initialize(this, initializationStatus -> {
             loadBottomBanner();
             loadRatingInterstitial();
+            loadReportRewarded();
+            loadAppOpenAd();
         });
     }
 
@@ -238,8 +257,122 @@ public class MainActivity extends BridgeActivity implements PurchasesUpdatedList
         });
     }
 
+    private void loadAppOpenAd() {
+        if (appOpenLoading || appOpenAd != null || appOpenShownForSession) return;
+        appOpenLoading = true;
+        AppOpenAd.load(
+            this,
+            isDebugBuild() ? TEST_APP_OPEN_AD_UNIT_ID : LIVE_APP_OPEN_AD_UNIT_ID,
+            new AdRequest.Builder().build(),
+            new AppOpenAdLoadCallback() {
+                @Override
+                public void onAdLoaded(AppOpenAd ad) {
+                    appOpenAd = ad;
+                    appOpenLoading = false;
+                    showAppOpenAdIfAvailable();
+                }
+
+                @Override
+                public void onAdFailedToLoad(LoadAdError error) {
+                    appOpenAd = null;
+                    appOpenLoading = false;
+                }
+            }
+        );
+    }
+
+    private void showAppOpenAdIfAvailable() {
+        if (appOpenShownForSession || appOpenShowing || appOpenAd == null || isFinishing() || isDestroyed()) return;
+        AppOpenAd ad = appOpenAd;
+        appOpenAd = null;
+        appOpenShowing = true;
+        ad.setFullScreenContentCallback(new FullScreenContentCallback() {
+            @Override
+            public void onAdDismissedFullScreenContent() {
+                appOpenShowing = false;
+                appOpenShownForSession = true;
+            }
+
+            @Override
+            public void onAdFailedToShowFullScreenContent(AdError error) {
+                appOpenShowing = false;
+                appOpenShownForSession = true;
+            }
+        });
+        ad.show(this);
+    }
+
+    private void loadReportRewarded() {
+        if (reportRewardLoading || reportRewardedAd != null) return;
+        reportRewardLoading = true;
+        RewardedAd.load(
+            this,
+            isDebugBuild() ? TEST_REPORT_REWARDED_AD_UNIT_ID : LIVE_REPORT_REWARDED_AD_UNIT_ID,
+            new AdRequest.Builder().build(),
+            new RewardedAdLoadCallback() {
+                @Override
+                public void onAdLoaded(RewardedAd ad) {
+                    reportRewardedAd = ad;
+                    reportRewardLoading = false;
+                }
+
+                @Override
+                public void onAdFailedToLoad(LoadAdError error) {
+                    reportRewardedAd = null;
+                    reportRewardLoading = false;
+                }
+            }
+        );
+    }
+
+    /** Shows the report reward and resolves only after AdMob awards it. */
+    public void showReportReward(com.getcapacitor.PluginCall call) {
+        runOnUiThread(() -> {
+            if (adFreeActive) {
+                com.getcapacitor.JSObject result = new com.getcapacitor.JSObject();
+                result.put("earned", true);
+                call.resolve(result);
+                return;
+            }
+            if (reportRewardedAd == null) {
+                loadReportRewarded();
+                call.reject("The report reward is loading. Please try again in a moment.");
+                return;
+            }
+
+            RewardedAd ad = reportRewardedAd;
+            reportRewardedAd = null;
+            final boolean[] earned = { false };
+            ad.setFullScreenContentCallback(new FullScreenContentCallback() {
+                @Override
+                public void onAdDismissedFullScreenContent() {
+                    if (!earned[0]) call.reject("Finish the sponsored message to unlock this report.");
+                    loadReportRewarded();
+                }
+
+                @Override
+                public void onAdFailedToShowFullScreenContent(AdError error) {
+                    call.reject("The report reward could not be shown. Please try again.");
+                    loadReportRewarded();
+                }
+            });
+            ad.show(this, rewardItem -> {
+                earned[0] = true;
+                com.getcapacitor.JSObject result = new com.getcapacitor.JSObject();
+                result.put("earned", true);
+                call.resolve(result);
+            });
+        });
+    }
+
     private boolean isDebugBuild() {
         return (getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0;
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        showAppOpenAdIfAvailable();
     }
 
     /** Refreshes the locally held entitlement from Google Play's owned purchases. */

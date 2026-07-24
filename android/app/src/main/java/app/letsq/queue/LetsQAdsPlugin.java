@@ -15,4 +15,13 @@ public class LetsQAdsPlugin extends Plugin {
             call.resolve();
         }
     }
+
+    @com.getcapacitor.PluginMethod
+    public void showReportReward(PluginCall call) {
+        if (getActivity() instanceof MainActivity) {
+            ((MainActivity) getActivity()).showReportReward(call);
+        } else {
+            call.reject("Native ads are available only in the installed app.");
+        }
+    }
 }
