@@ -584,6 +584,8 @@
   </main>
 </div>
 
+<script>var translations={en:{},es:{},'zh-Hant':{},'zh-Hans':{},ja:{},ko:{}};</script>
+<script src="i18n-extra.js"></script>
 <script>
 const appState={
   tab:'home', accent:'#006BFF', accent2:'#00B8FF', dark:false, paused:false,
@@ -610,7 +612,7 @@ function switchTab(tab){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById('screen-'+tab).classList.add('active');
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
-  document.getElementById('pageTitle').textContent=titles[tab];
+  document.getElementById('pageTitle').textContent=translateText(titles[tab]);
   document.getElementById('content').scrollTop=0;
   if(tab==='list') renderQueueList();
   if(tab==='host') renderHostQueue();
@@ -621,7 +623,7 @@ function setQueuerView(view){document.querySelectorAll('#screen-queuer .flow-vie
 function showEventPreview(){setQueuerView('preview')}
 function setHomeView(view){document.querySelectorAll('#screen-home .home-view').forEach(v=>v.style.display='none');document.getElementById('home-'+view).style.display='block';document.getElementById('content').scrollTop=0}
 function openHostSetup(){
-  appState.tab='home';document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById('screen-home').classList.add('active');document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.tab==='host'));document.getElementById('pageTitle').textContent='Host setup';setHomeView('setup');document.getElementById('hostSetupSubmit').textContent=appState.hostQueuePublished?'Save changes & return to Host':'Publish queue & open Host';
+  appState.tab='home';document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById('screen-home').classList.add('active');document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.tab==='host'));document.getElementById('pageTitle').textContent=translateText('Host setup');setHomeView('setup');document.getElementById('hostSetupSubmit').textContent=translateText(appState.hostQueuePublished?'Save changes & return to Host':'Publish queue & open Host');
 }
 function joinQueue(){
   const code=(document.getElementById('secretCode').value||'MANGO7').toUpperCase();
@@ -721,7 +723,62 @@ function openModal(type){
 }
 function closeModal(){document.getElementById('modalBackdrop').classList.remove('show')}
 function backdropClose(e){if(e.target.id==='modalBackdrop')closeModal()}
-function setLanguage(language){appState.language=language;closeModal();showToast(`${language} selected. Full translation is being added next.`)}
+const languageCodes={English:'en','繁體中文':'zh-Hant','简体中文':'zh-Hans','Español':'es','日本語':'ja','한국어':'ko'};
+const sourceText=new WeakMap();
+let activeLanguage='en';
+function localizePage(root=document.body){
+  const dictionary=translations[activeLanguage]||{};
+  const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,{acceptNode(node){const parent=node.parentElement;if(!parent||['SCRIPT','STYLE'].includes(parent.tagName)||!node.nodeValue.trim())return NodeFilter.FILTER_REJECT;return NodeFilter.FILTER_ACCEPT}});
+  const nodes=[];while(walker.nextNode())nodes.push(walker.currentNode);
+  nodes.forEach(node=>{const original=sourceText.get(node)??node.nodeValue;if(!sourceText.has(node))sourceText.set(node,original);const leading=(original.match(/^\s*/)||[''])[0],trailing=(original.match(/\s*$/)||[''])[0],key=original.trim();node.nodeValue=leading+(dictionary[key]||key)+trailing});
+  root.querySelectorAll?.('[aria-label],[title],[placeholder]').forEach(element=>{['aria-label','title','placeholder'].forEach(attribute=>{if(!element.hasAttribute(attribute))return;const key=`${attribute}:${element.getAttribute(attribute)}`;if(!sourceText.has(element))sourceText.set(element,{});const originals=sourceText.get(element);if(!originals[attribute])originals[attribute]=element.getAttribute(attribute);const original=originals[attribute];element.setAttribute(attribute,dictionary[original]||original)})});
+}
+function translateText(text){return (translations[activeLanguage]||{})[text]||text}
+const currentAppCopy={
+  'Q Home':['Inicio Q','Q 首頁','Q 首页','Q ホーム','Q 홈'],
+  'Q Report':['Informe Q','Q 報告','Q 报告','Q レポート','Q 리포트'],
+  'Q List':['Lista Q','Q 清單','Q 列表','Q リスト','Q 목록'],
+  'Queuer':['Visitante','排隊者','排队者','利用者','대기자'],
+  'Host':['主持人','主辦方','主办方','主催者','호스트'],
+  'Welcome to Let’s Q':['Bienvenido/a a Let’s Q','歡迎使用 Let’s Q','欢迎使用 Let’s Q','Let’s Q へようこそ','Let’s Q에 오신 것을 환영합니다'],
+  'Private queueing, made simple.':['Colas privadas, simplificadas.','簡單的私人排隊。','简单的私人排队。','プライベートな待機列を、もっと簡単に。','간편한 비공개 대기열.'],
+  'Join a queue anonymously, host a smooth line, or get help whenever you need it.':['Únete anónimamente, organiza una fila fluida o recibe ayuda cuando la necesites.','匿名加入隊伍、順暢管理排隊，隨時取得協助。','匿名加入队伍、顺畅管理排队，随时获得帮助。','匿名で待機列に参加し、スムーズに運営し、いつでもサポートを受けられます。','익명으로 대기열에 참여하고, 원활하게 운영하며, 필요할 때 도움을 받으세요.'],
+  'Scan or enter a passphrase.':['Escanea o escribe una frase secreta.','掃描或輸入通關密語。','扫描或输入通关密语。','読み取るか合言葉を入力します。','스캔하거나 암호 문구를 입력하세요.'],
+  'Set up your event and run the queue.':['Configura tu evento y gestiona la cola.','設定活動並管理隊伍。','设置活动并管理队伍。','イベントを設定して待機列を運営します。','행사를 설정하고 대기열을 운영하세요.'],
+  'Get help with joining, hosting, ads, or a subscription.':['Obtén ayuda con filas, organización, anuncios o suscripción.','取得加入、主辦、廣告或訂閱的協助。','获取加入、主办、广告或订阅的帮助。','参加、運営、広告、購読のサポートを受けられます。','참여, 운영, 광고 또는 구독 도움을 받으세요.'],
+  'Support':['Soporte','支援','支持','サポート','지원'],
+  'Event performance':['Rendimiento del evento','活動成效','活动成效','イベントの実績','이벤트 성과'],
+  'Export':['Exportar','匯出','导出','エクスポート','내보내기'],
+  'Yesterday':['Ayer','昨天','昨天','昨日','어제'],
+  'Private host analytics':['Análisis privado del anfitrión','主辦方私人分析','主办方私人分析','主催者向けプライベート分析','호스트 비공개 분석'],
+  'Unlock this Q Report':['Desbloquea este informe Q','解鎖此 Q 報告','解锁此 Q 报告','この Q レポートを解除','이 Q 리포트 잠금 해제'],
+  'Watch one sponsored video for this report session, or subscribe for ad-free reports.':['Mira un video patrocinado para esta sesión o suscríbete a informes sin anuncios.','觀看一支贊助影片以查看本次報告，或訂閱無廣告報告。','观看一支赞助视频以查看本次报告，或订阅无广告报告。','今回のレポート用にスポンサー動画を見るか、広告なしレポートに登録してください。','이번 리포트를 위해 스폰서 동영상을 보거나 광고 없는 리포트를 구독하세요.'],
+  'Watch sponsored video':['Ver video patrocinado','觀看贊助影片','观看赞助视频','スポンサー動画を見る','스폰서 동영상 보기'],
+  'Go ad-free · $1/month':['Sin anuncios · $1/mes','無廣告 · 每月 $1','无广告 · 每月 $1','広告なし · 月額 $1','광고 없음 · 월 $1'],
+  'Reports only use anonymous totals and timing data.':['Los informes solo usan totales anónimos y datos de tiempo.','報告僅使用匿名總數與時間資料。','报告仅使用匿名总数与时间数据。','レポートでは匿名の集計値と時間データのみを使用します。','리포트는 익명 합계와 시간 데이터만 사용합니다.'],
+  'THE MAIN TAKEAWAY':['IDEA PRINCIPAL','重點摘要','重点摘要','主なポイント','핵심 요약'],
+  'Joined':['Se unieron','已加入','已加入','参加','참여'],
+  'Served':['Atendidos','已服務','已服务','対応済み','처리 완료'],
+  'Avg wait':['Espera media','平均等待','平均等待','平均待ち時間','평균 대기'],
+  'Guest rating':['Calificación','訪客評分','访客评分','利用者評価','방문자 평점'],
+  'When guests joined':['Cuándo se unieron','訪客加入時間','访客加入时间','利用者の参加時間','방문자 참여 시간'],
+  'every 30 min':['cada 30 min','每 30 分鐘','每 30 分钟','30分ごと','30분마다'],
+  'Guests joining':['Personas que se unen','加入訪客','加入访客','参加した利用者','참여 방문자'],
+  'Simple plan for your next event':['Plan simple para tu próximo evento','下次活動的簡單計畫','下次活动的简单计划','次回イベントのシンプルな計画','다음 이벤트를 위한 간단한 계획'],
+  'Aggregate analytics only':['Solo análisis agregados','僅彙總分析','仅汇总分析','集計分析のみ','집계 분석만'],
+  'Host event setup':['設定主辦活動','設定主辦活動','设置主办活动','主催イベントの設定','호스트 이벤트 설정'],
+  'Publish your first queue.':['Publica tu primera cola.','發布你的第一個隊伍。','发布你的第一个队伍。','最初の待機列を公開します。','첫 대기열을 게시하세요.'],
+  'Event name':['Nombre del evento','活動名稱','活动名称','イベント名','이벤트 이름'],
+  'Store or booth name':['Nombre de tienda o puesto','商店或攤位名稱','商店或摊位名称','店舗またはブース名','매장 또는 부스 이름'],
+  'Queue name':['Nombre de la cola','隊伍名稱','队伍名称','待機列名','대기열 이름'],
+  'Starts':['Inicio','開始','开始','開始','시작'],
+  'Ends':['Fin','結束','结束','終了','종료'],
+  'Orders to serve during this time':['Pedidos a atender en este horario','此時段服務訂單數','此时段服务订单数','この時間に対応する件数','이 시간에 처리할 주문 수'],
+  '∞ Infinite':['∞ Sin límite','∞ 無限','∞ 无限','∞ 無制限','∞ 무제한'],
+  'Publish queue & open Host':['Publicar cola y abrir Host','發布隊伍並開啟主辦方','发布队伍并打开主办方','待機列を公開して主催者画面を開く','대기열 게시 및 호스트 열기']
+};
+Object.entries(currentAppCopy).forEach(([key,values])=>['es','zh-Hant','zh-Hans','ja','ko'].forEach((locale,index)=>{translations[locale][key]=values[index]}));
+function setLanguage(language){activeLanguage=languageCodes[language]||'en';appState.language=language;localStorage.setItem('letsQ.language',activeLanguage);document.documentElement.lang=activeLanguage;closeModal();localizePage();showToast(activeLanguage==='en'?'English selected.':`${language} selected.`)}
 function cancelTicket(){const q=appState.queues.find(q=>q.id===2);if(q){q.status='history';q.meta='Cancelled by you'}closeModal();switchTab('list');showToast('Ticket 012 cancelled')}
 function addWalkin(){appState.waiting.push({number:14,code:'PEACH8',note:'Walk-in ticket',time:'now'});closeModal();renderHostQueue();showToast('Walk-in ticket 014 created')}
 function selectScore(btn){btn.parentElement.querySelectorAll('button').forEach(b=>b.classList.remove('active'));btn.classList.add('active')}
@@ -735,8 +792,11 @@ document.querySelectorAll('#queueFilters button').forEach(b=>b.addEventListener(
 const languageButton=document.querySelector('.top-actions .icon-btn');
 if(languageButton){const notificationButton=languageButton.nextElementSibling;if(notificationButton){notificationButton.onclick=()=>openModal('notifications');notificationButton.setAttribute('title','Notifications')}const appearanceButton=document.createElement('button');appearanceButton.className='icon-btn';appearanceButton.setAttribute('aria-label','App color and appearance');appearanceButton.setAttribute('title','App color and appearance');appearanceButton.innerHTML='<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>';appearanceButton.onclick=()=>openModal('theme');languageButton.insertAdjacentElement('afterend',appearanceButton)}
 const qListNav=document.querySelector('[data-tab="list"] span');if(qListNav)qListNav.textContent='Q List';
+new MutationObserver(records=>{if(activeLanguage==='en')return;records.forEach(record=>record.addedNodes.forEach(node=>{if(node.nodeType===Node.ELEMENT_NODE)localizePage(node);else if(node.nodeType===Node.TEXT_NODE&&node.parentElement)localizePage(node.parentElement)}))}).observe(document.body,{childList:true,subtree:true});
 mountAdShell();startLaunchAd();
 renderQueueList();renderHostQueue();
+const savedLanguage=localStorage.getItem('letsQ.language');
+if(savedLanguage&&translations[savedLanguage]){activeLanguage=savedLanguage;document.documentElement.lang=savedLanguage;localizePage()}
 
 </script>
 </body>

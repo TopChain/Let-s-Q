@@ -6,12 +6,10 @@
     <meta name="theme-color" content="#006BFF">
     <meta name="description" content="Let's Q — a private, no-sign-up queue app.">
     <title>Let's Q — Private queueing</title>
-    <style>
-      html, body, iframe { width: 100%; height: 100%; margin: 0; border: 0; display: block; background: #eaf1fb; }
-      iframe { min-height: 100vh; }
-    </style>
+    <style>html,body{height:100%;margin:0;background:#eaf1fb;font:16px system-ui;color:#0f1e3b}main{min-height:100%;display:grid;place-items:center;text-align:center;padding:24px;box-sizing:border-box}a{color:#006BFF;font-weight:700}</style>
   </head>
   <body>
-    <iframe title="Let's Q app" src="app.html" allow="clipboard-write"></iframe>
+    <main><p>Opening Let’s Q…</p><noscript><p><a href="app.html">Open Let’s Q</a></p></noscript></main>
+    <script>window.location.replace('app.html');</script>
   </body>
 </html>
