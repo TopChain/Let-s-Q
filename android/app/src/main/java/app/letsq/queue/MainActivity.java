@@ -1,6 +1,7 @@
 package app.letsq.queue;
 
 import android.os.Bundle;
+import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
 import android.content.pm.ApplicationInfo;
@@ -157,7 +158,7 @@ public class MainActivity extends BridgeActivity implements PurchasesUpdatedList
     private void loadBottomBanner() {
         runOnUiThread(() -> {
             bannerAd = new AdView(this);
-            bannerAd.setAdUnitId(isDebugBuild() ? TEST_BANNER_AD_UNIT_ID : LIVE_BANNER_AD_UNIT_ID);
+            bannerAd.setAdUnitId(shouldUseTestAds() ? TEST_BANNER_AD_UNIT_ID : LIVE_BANNER_AD_UNIT_ID);
             bannerAd.setAdSize(AdSize.getLargeAnchoredAdaptiveBannerAdSize(this, getBannerWidthDp()));
             bannerAd.setAdListener(new AdListener() {
                 @Override
@@ -214,7 +215,7 @@ public class MainActivity extends BridgeActivity implements PurchasesUpdatedList
         interstitialLoading = true;
         InterstitialAd.load(
             this,
-            isDebugBuild() ? TEST_RATING_INTERSTITIAL_AD_UNIT_ID : LIVE_RATING_INTERSTITIAL_AD_UNIT_ID,
+            shouldUseTestAds() ? TEST_RATING_INTERSTITIAL_AD_UNIT_ID : LIVE_RATING_INTERSTITIAL_AD_UNIT_ID,
             new AdRequest.Builder().build(),
             new InterstitialAdLoadCallback() {
                 @Override
@@ -266,7 +267,7 @@ public class MainActivity extends BridgeActivity implements PurchasesUpdatedList
         appOpenLoading = true;
         AppOpenAd.load(
             this,
-            isDebugBuild() ? TEST_APP_OPEN_AD_UNIT_ID : LIVE_APP_OPEN_AD_UNIT_ID,
+            shouldUseTestAds() ? TEST_APP_OPEN_AD_UNIT_ID : LIVE_APP_OPEN_AD_UNIT_ID,
             new AdRequest.Builder().build(),
             new AppOpenAdLoadCallback() {
                 @Override
@@ -311,7 +312,7 @@ public class MainActivity extends BridgeActivity implements PurchasesUpdatedList
         reportRewardLoading = true;
         RewardedAd.load(
             this,
-            isDebugBuild() ? TEST_REPORT_REWARDED_AD_UNIT_ID : LIVE_REPORT_REWARDED_AD_UNIT_ID,
+            shouldUseTestAds() ? TEST_REPORT_REWARDED_AD_UNIT_ID : LIVE_REPORT_REWARDED_AD_UNIT_ID,
             new AdRequest.Builder().build(),
             new RewardedAdLoadCallback() {
                 @Override
@@ -402,8 +403,26 @@ public class MainActivity extends BridgeActivity implements PurchasesUpdatedList
         });
     }
 
-    private boolean isDebugBuild() {
-        return (getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0;
+    /**
+     * Never request live ads from a development emulator.  This keeps a
+     * locally-installed signed release safe to test while real devices from
+     * Google Play continue to request the live Let’s Q ad units.
+     */
+    private boolean shouldUseTestAds() {
+        if ((getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0) return true;
+
+        String fingerprint = Build.FINGERPRINT == null ? "" : Build.FINGERPRINT;
+        String model = Build.MODEL == null ? "" : Build.MODEL;
+        String manufacturer = Build.MANUFACTURER == null ? "" : Build.MANUFACTURER;
+        String product = Build.PRODUCT == null ? "" : Build.PRODUCT;
+        return fingerprint.startsWith("generic")
+            || fingerprint.startsWith("unknown")
+            || model.contains("google_sdk")
+            || model.contains("Emulator")
+            || model.contains("Android SDK built for x86")
+            || manufacturer.contains("Genymotion")
+            || product.contains("sdk_gphone")
+            || product.contains("emulator");
     }
 
     @Override
