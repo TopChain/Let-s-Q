@@ -6,7 +6,7 @@ window.LetsQQr = {
       errorCorrectionLevel: 'M',
       margin: 1,
       width: 720,
-      color: { dark: '#163941', light: '#fffaf0' }
+      color: { dark: '#000000', light: '#ffffff' }
     });
   }
 };

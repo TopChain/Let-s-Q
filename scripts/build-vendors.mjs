@@ -16,5 +16,6 @@ const common = {
 };
 
 await build({ ...common, entryPoints: [resolve(root, 'scripts/supabase-browser-entry.js')], outfile: resolve(vendor, 'supabase.js') });
+await build({ ...common, entryPoints: [resolve(root, 'scripts/firebase-browser-entry.js')], outfile: resolve(vendor, 'firebase.js') });
 await build({ ...common, entryPoints: [resolve(root, 'scripts/qr-browser-entry.js')], outfile: resolve(vendor, 'qrcode.js') });
 await build({ ...common, entryPoints: [resolve(root, 'scripts/qr-scanner-browser-entry.js')], outfile: resolve(vendor, 'qr-scanner.js') });

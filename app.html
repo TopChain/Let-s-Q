@@ -115,6 +115,11 @@
   .scanner .scan-center{z-index:2;text-align:center;color:white}
   .scanner .scan-center svg{width:48px;height:48px;stroke:white;fill:none;stroke-width:1.6}
   .scanner .scan-center span{display:block;font-size:12px;margin-top:7px;color:#C6E8FF}
+  .scanner video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none}
+  .scanner.camera-active{background:#071326}
+  .scanner.camera-active video{display:block}
+  .scanner.camera-active:after{z-index:3;pointer-events:none}
+  .scanner.camera-active .scan-center{position:relative;z-index:4;text-shadow:0 1px 8px rgba(0,0,0,.7)}
   .or{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:11px;margin:14px 0}
   .or:before,.or:after{content:"";height:1px;background:var(--line);flex:1}
   .quick-code{display:flex;gap:8px}
@@ -267,7 +272,7 @@
   .modal-head{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:13px}
   .modal-head h3{font-family:Poppins,sans-serif;font-size:18px;margin:0}
   .modal-close{border:0;background:var(--cloud);color:var(--navy);width:34px;height:34px;border-radius:12px;font-size:18px}
-  .qr-large{width:210px;height:210px;margin:14px auto;border:12px solid white;border-radius:20px;background:
+  .qr-large{width:210px;height:210px;margin:14px auto;border:12px solid white;border-radius:0;background:
     radial-gradient(circle at 18% 18%,var(--navy) 0 7%,transparent 7% 12%,var(--navy) 12% 19%,transparent 19%),
     radial-gradient(circle at 82% 18%,var(--navy) 0 7%,transparent 7% 12%,var(--navy) 12% 19%,transparent 19%),
     radial-gradient(circle at 18% 82%,var(--navy) 0 7%,transparent 7% 12%,var(--navy) 12% 19%,transparent 19%),
@@ -306,7 +311,7 @@
     </div>
   </aside>
 
-  <main class="phone" aria-label="Let's Q mobile app prototype">
+  <main class="phone" aria-label="Let's Q mobile app">
     <div class="app-shell">
       <header class="topbar">
         <div class="brand-mini">
@@ -331,47 +336,27 @@
             <h2 class="title">Scan. Hold your spot. Walk away.</h2>
             <p class="subtitle">Join a queue without creating an account or sharing your name, phone number, or email.</p>
             <div class="privacy-strip"><span class="privacy-lock">🔒</span><span><b>Private by default</b>Your ticket uses only a number and a passphrase you choose. Let’s Q has no sign-in, contacts, location, or guest profile.</span></div>
-            <div class="scanner" onclick="showEventPreview()">
+            <div class="scanner" id="qrScanner" onclick="startQrScanner()" role="button" tabindex="0" aria-label="Open camera QR scanner">
+              <video id="qrVideo" autoplay muted playsinline></video><canvas id="qrCanvas" hidden></canvas>
               <div class="scan-center">
                 <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM18 18h3v3h-3zM18 14h3M14 18v3"/></svg>
-                <span>Tap to simulate QR scan</span>
+                <span id="scannerMessage">Tap to open your camera</span>
               </div>
             </div>
-            <button class="btn primary wide" onclick="showEventPreview()">
+            <button class="btn primary wide" onclick="startQrScanner()">
               <svg viewBox="0 0 24 24"><path d="M3 8V5a2 2 0 0 1 2-2h3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M8 21H5a2 2 0 0 1-2-2v-3"/><path d="M7 12h10"/></svg>
               Scan QR Code
             </button>
-            <div class="or">or enter a queue passphrase</div>
+            <div class="or">or enter the host's queue code</div>
             <div class="quick-code">
-              <input class="input" id="queuePass" value="RIVER3" maxlength="12" aria-label="Queue passphrase" />
-              <button class="btn secondary" onclick="showEventPreview()">Continue</button>
+              <input class="input" id="queuePass" placeholder="Example: Q7K2M9" maxlength="20" aria-label="Queue code" />
+              <button class="btn secondary" onclick="openQueueFromCode()">Continue</button>
             </div>
-            <p class="prototype-note">Prototype shortcut: both actions open the sample “Riverside Expo — Photo Queue.”</p>
-          </div>
-
-          <div id="queuer-preview" class="flow-view" style="display:none">
-            <button class="btn ghost small" onclick="setQueuerView('scan')">← Back</button>
-            <div class="card event-preview" style="margin-top:12px">
-              <div class="event-cover">
-                <span class="badge live"><span class="dot"></span>Open now</span>
-                <h3>Riverside Expo</h3><p>Booth 3 · Photo Queue</p>
-              </div>
-              <div class="event-body">
-                <div class="meta-grid">
-                  <div class="meta"><b>12 people</b><span>currently waiting</span></div>
-                  <div class="meta"><b>~9 min</b><span>estimated wait</span></div>
-                  <div class="meta"><b>009</b><span>now serving</span></div>
-                  <div class="meta"><b>Open</b><span>until 6:00 PM</span></div>
-                </div>
-                <p class="subtitle" style="margin-bottom:13px">No account is required. Create a private passphrase that staff will verify only when your number is called.</p>
-                <button class="btn primary wide" onclick="setQueuerView('setup')">Join this queue</button>
-                <button class="btn ghost wide" style="margin-top:8px" onclick="setQueuerView('full')">Preview queue-full state</button>
-              </div>
-            </div>
+            <p class="prototype-note">The camera only reads the host's QR code. Let’s Q does not show a public list of open queues.</p>
           </div>
 
           <div id="queuer-setup" class="flow-view" style="display:none">
-            <button class="btn ghost small" onclick="setQueuerView('preview')">← Back</button>
+            <button class="btn ghost small" onclick="setQueuerView('scan')">← Back</button>
             <div class="eyebrow" style="margin-top:14px">Ticket setup</div>
             <h2 class="title">Personalize your ticket.</h2>
             <p class="subtitle">Language and ticket color are required. Waiting and “your turn” status colors remain fixed for clarity.</p>
@@ -379,8 +364,8 @@
               <div class="field"><label>Display language</label>
                 <select class="select"><option>English</option><option>繁體中文</option><option>简体中文</option><option>Español</option><option>日本語</option><option>한국어</option></select>
               </div>
-              <div class="field"><label>Private passphrase</label><input class="input" id="secretCode" value="MANGO7" maxlength="12" /><span class="tiny">Choose anything memorable. It is not a name or contact detail.</span></div>
-              <div class="field"><label>Message to the booth (optional)</label><textarea class="textarea" id="boothMessage">Wheelchair access needed.</textarea></div>
+              <div class="field"><label>Private passphrase</label><input class="input" id="secretCode" placeholder="Choose a private code" maxlength="12" /><span class="tiny">Choose anything memorable. It is not a name or contact detail.</span></div>
+              <div class="field"><label>Message to the booth (optional)</label><textarea class="textarea" id="boothMessage" placeholder="Optional service note"></textarea></div>
               <div class="field" style="margin-bottom:0"><label>Your ticket color</label>
                 <div class="swatches" id="personalSwatches">
                   <button class="swatch" data-color="#EF4444" style="background:#EF4444"></button>
@@ -401,7 +386,7 @@
             <div class="card ticket" id="liveTicket">
               <div class="ticket-head">
                 <div class="brand-text">LET'S Q</div>
-                <div class="ticket-event"><b>Riverside Expo</b><span>Photo Queue</span></div>
+                <div class="ticket-event"><b id="ticketEventName">Your event</b><span id="ticketQueueName">Your queue</span></div>
               </div>
               <div class="number-pair">
                 <div class="number-box"><span>Now serving</span><b id="ticketServing">009</b></div>
@@ -415,25 +400,14 @@
               <div class="ticket-code"><span>Secret code</span><b id="ticketSecret">MANGO7</b></div>
               <div class="ticket-actions"><button class="btn ghost" onclick="openModal('share')">Share ticket</button><button class="btn ghost" onclick="openModal('cancel')">Cancel ticket</button></div>
             </div>
-            <div class="grid-2">
-              <button class="btn secondary" onclick="makeReady()">Demo: My turn</button>
-              <button class="btn ghost" onclick="openModal('survey')">Complete survey</button>
-            </div>
+            <button class="btn secondary wide" onclick="refreshTicketStatus()">Refresh queue status</button>
+            <button class="btn ghost wide" style="margin-top:8px" onclick="openModal('survey')">Complete survey</button>
             <div class="card" style="margin-top:14px">
               <div class="card-title"><h3>Queue policy</h3><span class="badge info">Visible to all</span></div>
               <p class="subtitle" style="margin:0">If you do not respond, your ticket is deferred five places and recalled. After two deferrals, it is automatically cancelled.</p>
             </div>
           </div>
 
-          <div id="queuer-full" class="flow-view" style="display:none">
-            <button class="btn ghost small" onclick="setQueuerView('preview')">← Back</button>
-            <div class="card empty" style="margin-top:14px">
-              <div class="empty-icon" style="background:#FEF3C7;color:#B45309"><svg viewBox="0 0 24 24"><path d="M12 8v4M12 16h.01"/><path d="M10.3 3.7 2.4 17.2A2 2 0 0 0 4.1 20h15.8a2 2 0 0 0 1.7-2.8L13.7 3.7a2 2 0 0 0-3.4 0z"/></svg></div>
-              <h3>This queue is temporarily paused.</h3>
-              <p>The host has paused new joins while they catch up. Try again in a few minutes.</p>
-              <button class="btn primary wide" onclick="setQueuerView('scan')">Find another queue</button>
-            </div>
-          </div>
         </div>
 
         <!-- QUEUER LIST -->
@@ -473,7 +447,7 @@
             </div>
             <div class="card">
               <div class="card-title"><h3>Current activity</h3><button class="btn ghost small" onclick="switchTab('list')">View all</button></div>
-              <div class="activity-row"><div class="activity-icon"><svg viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg></div><div class="activity-copy"><b>Riverside Expo — Photo Queue</b><span>Ticket 012 · 3 people ahead</span></div><div class="activity-time">now</div></div>
+              <div class="activity-row"><div class="activity-icon"><svg viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg></div><div class="activity-copy"><b>Your queues appear here</b><span>Scan a host QR code to join privately.</span></div></div>
               <div class="activity-row"><div class="activity-icon"><svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="m7 14 4-4 3 3 5-6"/></svg></div><div class="activity-copy"><b>Last event report is ready</b><span>312 guests · average wait 8 min</span></div><div class="activity-time">1d</div></div>
             </div>
             <div class="card" onclick="openModal('privacy')">
@@ -488,9 +462,9 @@
             <p class="subtitle">Add the essentials, then publish a private queue people can join without sharing personal information.</p>
             <div class="stepper"><span class="active"></span><span class="active"></span><span class="active"></span><span></span></div>
             <div class="card">
-              <div class="field"><label>Event name</label><input class="input" id="eventName" value="Riverside Expo" /></div>
-              <div class="field"><label>Store or booth name</label><input class="input" id="storeName" value="Booth 3" /></div>
-              <div class="field"><label>Queue name</label><input class="input" id="queueName" value="Photo Queue" /></div>
+              <div class="field"><label>Event name</label><input class="input" id="eventName" placeholder="Example: Summer Market" /></div>
+              <div class="field"><label>Store or booth name</label><input class="input" id="storeName" placeholder="Example: Booth 3" /></div>
+              <div class="field"><label>Queue name</label><input class="input" id="queueName" placeholder="Example: Pickup line" /></div>
               <div class="field store-photo-upload"><label>Store photo <span class="tiny">(optional)</span></label><div class="store-photo-box" id="storePhotoPreview"><span><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.5"/><path d="m21 15-5-5L5 19"/></svg>Add a storefront or booth photo</span></div><input class="input" id="storePhoto" type="file" accept="image/*" onchange="previewStorePhoto(event)" /></div>
               <div class="grid-2 schedule-grid">
                 <div class="field"><label>Starts</label><input class="input" type="datetime-local" id="startTime" value="2026-07-24T09:00" /></div>
@@ -517,9 +491,9 @@
 
         <!-- HOST -->
         <div class="screen" id="screen-host">
-          <div class="row between" style="margin-bottom:10px"><div><div class="eyebrow">Host</div><h2 class="title" style="margin-bottom:0" id="hostEventTitle">Riverside Expo</h2></div><div class="row" style="gap:6px"><button class="btn ghost small" onclick="openHostSetup()">Edit setup</button><button class="btn secondary small" id="pauseBtn" onclick="togglePause()">Pause scans</button></div></div>
+          <div class="row between" style="margin-bottom:10px"><div><div class="eyebrow">Host</div><h2 class="title" style="margin-bottom:0" id="hostEventTitle">Your queue</h2></div><div class="row" style="gap:6px"><button class="btn ghost small" onclick="openHostSetup()">Edit setup</button><button class="btn secondary small" id="pauseBtn" onclick="togglePause()">Pause scans</button></div></div>
           <p class="subtitle">Booth 3 · Live queue management</p>
-          <div class="segmented"><button class="active">Photo Queue</button><button onclick="showToast('Switched to Prize Pickup queue')">Prize Pickup</button><button onclick="showToast('Maximum two queues per booth')">+ Add</button></div>
+          <div class="segmented"><button class="active" id="hostQueueName">Your queue</button></div>
           <div class="grid-3">
             <div class="stat-card"><b id="waitingCount">4</b><span>Waiting</span></div>
             <div class="stat-card"><b>7m</b><span>Avg wait</span></div>
@@ -536,7 +510,7 @@
           </div>
           <div class="card">
             <div class="row between">
-              <div class="row"><div class="qr-mini"></div><div><h3 style="font-size:13px;margin:0 0 4px">Photo Queue QR</h3><span class="tiny">Passphrase: RIVER3</span></div></div>
+              <div class="row"><div class="qr-mini"></div><div><h3 id="hostQrTitle" style="font-size:13px;margin:0 0 4px">Your queue QR code</h3><span class="tiny" id="hostQrCode">Publish your queue to create a code</span></div></div>
               <button class="btn secondary small" onclick="openModal('qr')">Show</button>
             </div>
           </div>
@@ -588,24 +562,18 @@
 
 <script>var translations={en:{},es:{},'zh-Hant':{},'zh-Hans':{},ja:{},ko:{}};</script>
 <script src="i18n-extra.js"></script>
+<script src="firebase-config.js"></script>
+<script src="vendor/firebase.js"></script>
+<script src="vendor/qrcode.js"></script>
+<script src="vendor/qr-scanner.js"></script>
 <script>
 const appState={
   tab:'home', accent:'#006BFF', accent2:'#00B8FF', dark:false, paused:false,
   selectedPersonal:'#006BFF', selectedHost:'#006BFF', reportUnlocked:false, subscribed:false, infiniteTarget:false, hostQueuePublished:false,
-  serving:9, served:21,
-  waiting:[
-    {number:10,code:'MANGO7',note:'Wheelchair access needed.',time:'1m'},
-    {number:11,code:'RIVER',note:'Photo queue',time:'4m'},
-    {number:12,code:'OWLKID',note:'Needs a little extra time.',time:'6m'},
-    {number:13,code:'PLUM3',note:'Walk-in ticket',time:'8m'}
-  ],
-  queues:[
-    {id:1,event:'Golden Wok Kitchen',queue:'Main Line',number:'045',status:'ready',accent:'#22C55E',meta:'Your turn now'},
-    {id:2,event:'Riverside Expo — Booth 3',queue:'Photo Queue',number:'012',status:'waiting',accent:'#006BFF',meta:'3 people ahead · ~9 min'},
-    {id:3,event:'Riverside Expo — Booth 3',queue:'Prize Pickup',number:'004',status:'waiting',accent:'#7C3AED',meta:'1 person ahead · ~4 min'},
-    {id:4,event:'Sunset Market',queue:'Taco Stand',number:'019',status:'history',accent:'#94A3B8',meta:'Cancelled by you'}
-  ]
+  serving:0, served:0, nextTicket:1, waiting:[], queues:[], activeQueue:null
 };
+let firebaseReady=false,stopHostQueueListener=null;
+const firebaseStartup=window.LetsQFirebase?.init(window.LetsQFirebaseConfig).then(result=>{firebaseReady=Boolean(result);if(firebaseReady)console.info('Let’s Q connected to Firebase');return result;}).catch(error=>{console.warn('Firebase connection unavailable',error);return null});
 const titles={queuer:'Queuer',list:'Q List',home:'Q Home',host:'Host',report:'Q Report'};
 
 function switchTab(tab){
@@ -621,18 +589,91 @@ function switchTab(tab){
   if(tab==='report') renderReport();
 }
 function renderReport(){const unlocked=appState.reportUnlocked||appState.subscribed;document.getElementById('reportPaywall').style.display=unlocked?'none':'block';document.getElementById('reportInsights').style.display=unlocked?'block':'none'}
-function setQueuerView(view){document.querySelectorAll('#screen-queuer .flow-view').forEach(v=>v.style.display='none');document.getElementById('queuer-'+view).style.display='block';document.getElementById('content').scrollTop=0}
-function showEventPreview(){setQueuerView('preview')}
+function setQueuerView(view){
+  document.querySelectorAll('#screen-queuer .flow-view').forEach(v=>v.style.display='none');
+  document.getElementById('queuer-'+view).style.display='block';
+  if(view!=='scan') stopQrScanner();
+  document.getElementById('content').scrollTop=0;
+}
+let qrStream=null,qrFrame=null;
+function stopQrScanner(){
+  if(qrFrame)cancelAnimationFrame(qrFrame);qrFrame=null;
+  if(qrStream)qrStream.getTracks().forEach(track=>track.stop());qrStream=null;
+  const video=document.getElementById('qrVideo');if(video)video.srcObject=null;
+  document.getElementById('qrScanner')?.classList.remove('camera-active');
+  const message=document.getElementById('scannerMessage');if(message)message.textContent='Tap to open your camera';
+}
+async function startQrScanner(){
+  if(qrStream)return;
+  if(!navigator.mediaDevices?.getUserMedia){showToast('Camera scanning is unavailable on this device. Enter the host code instead.');return}
+  try{
+    qrStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false});
+    const video=document.getElementById('qrVideo');video.srcObject=qrStream;await video.play();
+    document.getElementById('qrScanner').classList.add('camera-active');
+    document.getElementById('scannerMessage').textContent='Point the camera at the host QR code';
+    scanQrFrame();
+  }catch(error){stopQrScanner();showToast('Allow camera access to scan the host QR code.');}
+}
+function scanQrFrame(){
+  if(!qrStream)return;
+  const video=document.getElementById('qrVideo'),canvas=document.getElementById('qrCanvas');
+  if(video.readyState>=2&&video.videoWidth&&window.LetsQQrScanner){
+    canvas.width=video.videoWidth;canvas.height=video.videoHeight;
+    const context=canvas.getContext('2d',{willReadFrequently:true});context.drawImage(video,0,0,canvas.width,canvas.height);
+    const result=window.LetsQQrScanner.decode(context.getImageData(0,0,canvas.width,canvas.height).data,canvas.width,canvas.height);
+    if(result?.data){handleScannedQueue(result.data);return}
+  }
+  qrFrame=requestAnimationFrame(scanQrFrame);
+}
+function parseQueueCode(value){
+  const text=String(value||'').trim();
+  const match=text.match(/(?:LETQ:|[?&]queue=)(Q[A-Z0-9]{4,18})/i)||text.match(/^(Q[A-Z0-9]{4,18})$/i);
+  return match?match[1].toUpperCase():'';
+}
+function handleScannedQueue(value){
+  const code=parseQueueCode(value);stopQrScanner();
+  if(!code){showToast('That is not a Let’s Q queue QR code.');return}
+  document.getElementById('queuePass').value=code;openQueueFromCode();
+}
+async function openQueueFromCode(){
+  const code=parseQueueCode(document.getElementById('queuePass').value);
+  if(!code){showToast('Enter the queue code from the host QR.');return}
+  if(firebaseReady){
+    try{const remote=await window.LetsQFirebase.findQueueByCode(code);if(!remote){showToast('This queue is closed or the code is not valid.');return}appState.activeQueue=remote;setQueuerView('setup');return}catch(error){showToast('Could not open that queue. Please try again.');return}
+  }
+  if(!appState.activeQueue||appState.activeQueue.code!==code){showToast('This queue is not on this device. Finish Firebase setup so QR codes work between phones.');return}
+  setQueuerView('setup');
+}
+async function openLinkedQueue(){
+  const code=parseQueueCode(window.location.search);
+  if(!code)return;
+  switchTab('queuer');setQueuerView('scan');
+  document.getElementById('queuePass').value=code;
+  await openQueueFromCode();
+}
 function setHomeView(view){document.querySelectorAll('#screen-home .home-view').forEach(v=>v.style.display='none');document.getElementById('home-'+view).style.display='block';document.getElementById('content').scrollTop=0}
 function openHostSetup(){
   appState.tab='home';document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById('screen-home').classList.add('active');document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.tab==='host'));document.getElementById('pageTitle').textContent=translateText('Host setup');setHomeView('setup');document.getElementById('hostSetupSubmit').textContent=translateText(appState.hostQueuePublished?'Save changes & return to Host':'Publish queue & open Host');
 }
-function joinQueue(){
-  const code=(document.getElementById('secretCode').value||'MANGO7').toUpperCase();
+async function joinQueue(){
+  if(!appState.activeQueue){showToast('Scan a host QR code first.');setQueuerView('scan');return}
+  const code=document.getElementById('secretCode').value.trim().toUpperCase();
+  if(!code){showToast('Choose a private passphrase.');return}
+  let number;
+  try{
+    if(firebaseReady&&appState.activeQueue.id){const created=await window.LetsQFirebase.joinQueue(appState.activeQueue.id,{secretCode:code,note:document.getElementById('boothMessage').value.trim()||'',color:appState.selectedPersonal});number=created.ticketNumber}
+    else number=appState.nextTicket++;
+  }catch(error){showToast(error?.message||'Could not create your ticket.');return}
   document.getElementById('ticketSecret').textContent=code;
-  const exists=appState.queues.some(q=>q.id===2);
-  if(!exists) appState.queues.splice(1,0,{id:2,event:'Riverside Expo — Booth 3',queue:'Photo Queue',number:'012',status:'waiting',accent:appState.selectedPersonal,meta:'3 people ahead · ~9 min'});
-  setQueuerView('ticket');showToast('Ticket 012 added to Q List');
+  document.getElementById('ticketNumber').textContent=String(number).padStart(3,'0');
+  document.getElementById('ticketServing').textContent=String(appState.serving).padStart(3,'0');
+  document.getElementById('ticketEventName').textContent=appState.activeQueue.event;
+  document.getElementById('ticketQueueName').textContent=appState.activeQueue.queue;
+  const ahead=appState.waiting.length;document.getElementById('ticketStatusText').textContent=ahead?`${ahead} ${ahead===1?'person':'people'} ahead`:'You are first in line';
+  document.getElementById('ticketSubText').textContent=ahead?`Estimated wait: about ${Math.max(2,ahead*3)} minutes`:'The host will call you shortly';
+  const ticket={number,code,note:document.getElementById('boothMessage').value.trim()||'No note',time:'just now'};appState.waiting.push(ticket);
+  appState.queues=[{id:1,event:appState.activeQueue.event,queue:appState.activeQueue.queue,number:String(number).padStart(3,'0'),status:'waiting',accent:appState.selectedPersonal,meta:ahead?`${ahead} ${ahead===1?'person':'people'} ahead`:'First in line'}];
+  setQueuerView('ticket');showToast(`Ticket ${String(number).padStart(3,'0')} added to Q List`);
 }
 function makeReady(){
   document.getElementById('ticketServing').textContent='012';
@@ -643,6 +684,7 @@ function makeReady(){
   const q=appState.queues.find(q=>q.id===2);if(q){q.status='ready';q.meta='Your turn now'}
   showToast('Demo status changed: it is now your turn');
 }
+function refreshTicketStatus(){showToast('Queue status is up to date.');}
 function renderQueueList(filter='all'){
   const box=document.getElementById('queueList');
   const list=appState.queues.filter(q=>filter==='all'||q.status===filter||(filter==='history'&&q.status==='history'));
@@ -655,19 +697,40 @@ function renderHostQueue(){
   document.getElementById('waitingCount').textContent=appState.waiting.length;
   document.getElementById('servedCount').textContent=appState.served;
   const current=appState.waiting[0];document.getElementById('hostSecret').textContent=current?current.code:'—';
+  if(appState.activeQueue){document.getElementById('hostQrTitle').textContent=`${appState.activeQueue.queue} QR code`;document.getElementById('hostQrCode').textContent=`Queue code: ${appState.activeQueue.code}`}
   document.getElementById('hostWaitingList').innerHTML=appState.waiting.length?appState.waiting.map(p=>`<div class="waiting-person"><div class="person-num">${String(p.number).padStart(3,'0')}</div><div class="person-info"><b>${p.code}</b><span>${p.note}</span></div><div class="person-time">${p.time}</div></div>`).join(''):'<div class="empty" style="padding:18px"><h3>Queue is clear</h3><p>No guests are currently waiting.</p></div>';
 }
-function callNext(){if(!appState.waiting.length){showToast('No waiting tickets');return}const next=appState.waiting[0];appState.serving=next.number;renderHostQueue();showToast(`Calling ticket ${String(next.number).padStart(3,'0')} · ${next.code}`)}
-function markPresent(){if(!appState.waiting.length){showToast('No active ticket');return}const done=appState.waiting.shift();appState.served++;appState.serving=done.number;renderHostQueue();showToast(`Ticket ${String(done.number).padStart(3,'0')} marked present`)}
+function watchPublishedQueue(){
+  if(!firebaseReady||!appState.activeQueue?.id)return;
+  stopHostQueueListener?.();
+  stopHostQueueListener=window.LetsQFirebase.watchHostQueue(appState.activeQueue.id,({queue,tickets})=>{
+    if(queue)appState.activeQueue={...appState.activeQueue,...queue};
+    appState.waiting=tickets.filter(ticket=>ticket.status==='waiting').map(ticket=>({id:ticket.id,number:ticket.ticketNumber,code:ticket.secretCode||'PRIVATE',note:ticket.note||'No note',time:'Waiting'}));
+    appState.serving=appState.activeQueue?.nowServing||0;appState.served=appState.activeQueue?.served||0;
+    if(appState.tab==='host')renderHostQueue();
+  });
+}
+async function callNext(){if(!appState.waiting.length){showToast('No waiting tickets');return}const next=appState.waiting[0];appState.serving=next.number;if(firebaseReady&&appState.activeQueue?.id)await window.LetsQFirebase.updateQueue(appState.activeQueue.id,{nowServing:next.number});renderHostQueue();showToast(`Calling ticket ${String(next.number).padStart(3,'0')} · ${next.code}`)}
+async function markPresent(){if(!appState.waiting.length){showToast('No active ticket');return}const done=appState.waiting.shift();appState.served++;appState.serving=done.number;if(firebaseReady&&appState.activeQueue?.id&&done.id){await window.LetsQFirebase.updateTicket(appState.activeQueue.id,done.id,{status:'served'});await window.LetsQFirebase.updateQueue(appState.activeQueue.id,{served:appState.served,nowServing:done.number})}renderHostQueue();showToast(`Ticket ${String(done.number).padStart(3,'0')} marked present`)}
 function skipTicket(){if(appState.waiting.length>1){const p=appState.waiting.shift();appState.waiting.push({...p,time:'recalled'});renderHostQueue();showToast(`${p.code} skipped with no penalty`)}else showToast('No other ticket to call')}
 function noShow(){if(!appState.waiting.length){showToast('No active ticket');return}const p=appState.waiting.shift();appState.waiting.push({...p,note:'No-show: deferred 5 positions',time:'deferred'});renderHostQueue();showToast(`${p.code} deferred five places automatically`)}
 function togglePause(){appState.paused=!appState.paused;const b=document.getElementById('pauseBtn');b.textContent=appState.paused?'Resume scans':'Pause scans';b.className='btn '+(appState.paused?'danger':'secondary')+' small';showToast(appState.paused?'New scans are paused; existing tickets continue':'New scans resumed')}
-function publishEvent(){
+async function publishEvent(){
   const e=document.getElementById('eventName').value.trim(),store=document.getElementById('storeName').value.trim(),q=document.getElementById('queueName').value.trim(),start=document.getElementById('startTime').value,end=document.getElementById('endTime').value;
   if(!e||!store||!q||!start||!end){showToast('Add the event, store, queue, and schedule');return}
   if(new Date(end)<=new Date(start)){showToast('End date and time must be after the start');return}
   if(!appState.infiniteTarget&&(!Number.isFinite(+document.getElementById('orderTarget').value)||+document.getElementById('orderTarget').value<1)){showToast('Enter an order target or choose Infinite');return}
-  const wasPublished=appState.hostQueuePublished;appState.hostQueuePublished=true;document.getElementById('hostEventTitle').textContent=store;setHomeView('main');switchTab('host');showToast(wasPublished?`${q} settings saved`:`${q} published for ${appState.infiniteTarget?'an unlimited':'a '+document.getElementById('orderTarget').value+' order'} queue`)
+  const wasPublished=appState.hostQueuePublished;
+  if(!wasPublished){appState.serving=0;appState.served=0;appState.nextTicket=1;appState.waiting=[]}
+  const queueData={event:e,store,queue:q,code:appState.activeQueue?.code||`Q${Math.random().toString(36).slice(2,8).toUpperCase()}`,start,end};
+  try{
+    if(firebaseReady){
+      if(appState.activeQueue?.id){await window.LetsQFirebase.updateQueue(appState.activeQueue.id,queueData);appState.activeQueue={...appState.activeQueue,...queueData}}
+      else appState.activeQueue=await window.LetsQFirebase.createQueue(queueData);
+    }else appState.activeQueue=queueData;
+  }catch(error){showToast(error?.message||'Could not publish your queue.');return}
+  appState.hostQueuePublished=true;document.getElementById('hostEventTitle').textContent=store;document.getElementById('hostQueueName').textContent=q;setHomeView('main');switchTab('host');showToast(wasPublished?`${q} settings saved`:`${q} published. Show its QR code to guests.`)
+  watchPublishedQueue();
 }
 
 function previewStorePhoto(event){const file=event.target.files&&event.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=()=>{document.getElementById('storePhotoPreview').innerHTML=`<img src="${reader.result}" alt="Store photo preview">`};reader.readAsDataURL(file)}
@@ -698,8 +761,8 @@ function openModal(type){
   content.innerHTML=`<div class="modal-handle"></div><div class="modal-head"><h3>Choose language</h3><button class="modal-close" onclick="closeModal()">×</button></div><p class="subtitle">Choose the language you want Let’s Q to use.</p><div class="stack"><button class="btn secondary wide" onclick="setLanguage('English')">English</button><button class="btn secondary wide" onclick="setLanguage('繁體中文')">繁體中文</button><button class="btn secondary wide" onclick="setLanguage('简体中文')">简体中文</button><button class="btn secondary wide" onclick="setLanguage('Español')">Español</button><button class="btn secondary wide" onclick="setLanguage('日本語')">日本語</button><button class="btn secondary wide" onclick="setLanguage('한국어')">한국어</button></div>`;
   document.getElementById('modalBackdrop').classList.add('show');return;
  }
- if(type==='privacy'){
-  content.innerHTML=`<div class="modal-handle"></div><div class="modal-head"><h3>Your privacy in Let’s Q</h3><button class="modal-close" onclick="closeModal()">×</button></div><div class="privacy-strip"><span class="privacy-lock">🔒</span><span><b>Anonymous by default</b>Guests join with a ticket number and a private passphrase—never a name, phone number, email, account, or profile.</span></div><div class="stack"><div class="card" style="margin:0"><b style="font-size:13px">What hosts can see</b><p class="subtitle" style="margin:6px 0 0">Ticket number, passphrase, and an optional service note supplied by the guest.</p></div><div class="card" style="margin:0"><b style="font-size:13px">What reports contain</b><p class="subtitle" style="margin:6px 0 0">Only aggregate counts, timing, and anonymous satisfaction scores.</p></div><div class="card" style="margin:0"><b style="font-size:13px">This local demo</b><p class="subtitle" style="margin:6px 0 0">Runs entirely from files in this folder. It makes no network requests and creates no guest account.</p></div></div><button class="btn primary wide" style="margin-top:14px" onclick="closeModal()">Got it</button>`;
+  if(type==='privacy'){
+  content.innerHTML=`<div class="modal-handle"></div><div class="modal-head"><h3>Your privacy in Let’s Q</h3><button class="modal-close" onclick="closeModal()">×</button></div><div class="privacy-strip"><span class="privacy-lock">🔒</span><span><b>Anonymous by default</b>Guests join with a ticket number and a private passphrase—never a name, phone number, email, account, or profile.</span></div><div class="stack"><div class="card" style="margin:0"><b style="font-size:13px">What hosts can see</b><p class="subtitle" style="margin:6px 0 0">Ticket number, passphrase, and an optional service note supplied by the guest.</p></div><div class="card" style="margin:0"><b style="font-size:13px">What reports contain</b><p class="subtitle" style="margin:6px 0 0">Only aggregate counts, timing, and anonymous satisfaction scores.</p></div><div class="card" style="margin:0"><b style="font-size:13px">How it connects</b><p class="subtitle" style="margin:6px 0 0">Queue data is stored securely in Firebase with anonymous device access.</p></div></div><button class="btn primary wide" style="margin-top:14px" onclick="closeModal()">Got it</button>`;
   document.getElementById('modalBackdrop').classList.add('show'); return;
  }
  if(type==='support'){
@@ -712,7 +775,7 @@ function openModal(type){
  }
  const templates={
   theme:`<div class="modal-handle"></div><div class="modal-head"><h3>App color & appearance</h3><button class="modal-close" onclick="closeModal()">×</button></div><p class="subtitle">The accent applies across all five primary sections. Waiting and ready status colors remain fixed.</p><div class="theme-grid">${[['#006BFF','#00B8FF','Let’s Blue'],['#7C3AED','#A855F7','Violet'],['#0F766E','#14B8A6','Teal'],['#DB2777','#F472B6','Rose'],['#DC2626','#F97316','Sunset'],['#2563EB','#22C55E','Fresh'],['#111827','#475569','Midnight']].map((x,i)=>`<button class="theme-choice ${i===0?'active':''}" onclick="setTheme('${x[0]}','${x[1]}',this)"><div class="circle" style="--c:linear-gradient(135deg,${x[0]},${x[1]})"></div>${x[2]}</button>`).join('')}</div><div class="switch-row"><div class="switch-copy"><b>Dark appearance</b><span>Keep brand contrast and accessibility.</span></div><button id="darkSwitch" class="switch ${appState.dark?'on':''}" onclick="toggleDark(this)"></button></div>`,
-  qr:`<div class="modal-handle"></div><div class="modal-head"><h3>Photo Queue QR Code</h3><button class="modal-close" onclick="closeModal()">×</button></div><div class="qr-large"></div><div style="text-align:center"><b>Riverside Expo — Booth 3</b><p class="subtitle" style="margin:5px 0 13px">Scan to join · Passphrase RIVER3</p></div><div class="grid-2"><button class="btn secondary" onclick="showToast('QR image copied')">Copy</button><button class="btn primary" onclick="showToast('Print-ready sheet prepared')">Print</button></div>`,
+  qr:`<div class="modal-handle"></div><div class="modal-head"><h3>${appState.activeQueue?.queue||'Queue'} QR Code</h3><button class="modal-close" onclick="closeModal()">×</button></div><img id="hostQrImage" class="qr-large" alt="Queue QR code"/><div style="text-align:center"><b>${appState.activeQueue?.event||''}</b><p class="subtitle" style="margin:5px 0 13px">Scan to join privately · Code ${appState.activeQueue?.code||''}</p></div><div class="grid-2"><button class="btn secondary" onclick="copyQueueCode()">Copy code</button><button class="btn primary" onclick="showToast('Use your device print menu to print this QR code')">Print</button></div>`,
   share:`<div class="modal-handle"></div><div class="modal-head"><h3>Share ticket 012</h3><button class="modal-close" onclick="closeModal()">×</button></div><p class="subtitle">Anyone with this QR or link can view the live ticket and secret code.</p><div class="qr-large" style="width:180px;height:180px"></div><button class="btn primary wide" onclick="showToast('Shareable ticket link copied')">Copy shareable link</button>`,
   cancel:`<div class="modal-handle"></div><div class="modal-head"><h3>Cancel this ticket?</h3><button class="modal-close" onclick="closeModal()">×</button></div><p class="subtitle">Ticket 012 will be marked vacant and will never be reassigned. Numbers after it will not change.</p><div class="grid-2"><button class="btn ghost" onclick="closeModal()">Keep my place</button><button class="btn danger" onclick="cancelTicket()">Cancel ticket</button></div>`,
   survey:`<div class="modal-handle"></div><div class="modal-head"><h3>Quick satisfaction survey</h3><button class="modal-close" onclick="closeModal()">×</button></div>${['How was your wait?','How was the service?','Will you come again?'].map(q=>`<div class="field"><label>${q}</label><div class="segmented" style="margin:0">${[1,2,3,4,5].map(n=>`<button onclick="selectScore(this)">${['😞','🙁','😐','🙂','😀'][n-1]}</button>`).join('')}</div></div>`).join('')}<button class="btn primary wide" onclick="closeModal();showToast('Anonymous survey submitted')">Submit survey</button>`,
@@ -721,8 +784,15 @@ function openModal(type){
   settings:`<div class="modal-handle"></div><div class="modal-head"><h3>Photo Queue settings</h3><button class="modal-close" onclick="closeModal()">×</button></div><div class="field"><label>Orders to serve</label><div class="order-target"><input class="input" type="number" value="100"/><button class="btn secondary small">∞ Infinite</button></div></div><div class="field"><label>No-show policy</label><select class="select"><option>Defer 5 spots, twice, then cancel</option><option>Cancel immediately</option><option>Hold 5 minutes, twice, then cancel</option></select></div><div class="privacy-strip"><span class="privacy-lock">🔒</span><span><b>No guest contact data</b>Hosts manage anonymous ticket numbers only.</span></div><button class="btn primary wide" onclick="closeModal();showToast('Queue settings saved')">Save settings</button>`,
   closeQueue:`<div class="modal-handle"></div><div class="modal-head"><h3>Close Photo Queue early</h3><button class="modal-close" onclick="closeModal()">×</button></div><p class="subtitle">A message is required and will be sent immediately to every remaining ticket holder.</p><div class="field"><label>Message to 17 waiting guests</label><textarea class="textarea">Sorry—we must close the photo queue 30 minutes early because of weather. Thank you for your patience.</textarea></div><button class="btn danger wide" onclick="closeModal();showToast('Queue closed and 17 guests notified')">Close queue & notify guests</button>`
  };
- content.innerHTML=templates[type]||'';document.getElementById('modalBackdrop').classList.add('show');
+ content.innerHTML=templates[type]||'';document.getElementById('modalBackdrop').classList.add('show');if(type==='qr')renderHostQr();
 }
+async function renderHostQr(){
+  const image=document.getElementById('hostQrImage'),queue=appState.activeQueue;if(!image||!queue)return;
+  if(!window.LetsQQr){showToast('QR generator is loading. Please try again.');return}
+  const joinUrl=new URL('https://soft-bonbon-62fdc2.netlify.app/');joinUrl.searchParams.set('queue',queue.code);
+  image.src=await window.LetsQQr.toDataUrl(joinUrl.toString());
+}
+async function copyQueueCode(){const code=appState.activeQueue?.code||'';try{await navigator.clipboard.writeText(code);showToast('Queue code copied')}catch{showToast(`Queue code: ${code}`)}}
 function closeModal(){document.getElementById('modalBackdrop').classList.remove('show')}
 function backdropClose(e){if(e.target.id==='modalBackdrop')closeModal()}
 const languageCodes={English:'en','繁體中文':'zh-Hant','简体中文':'zh-Hans','Español':'es','日本語':'ja','한국어':'ko'};
@@ -797,6 +867,7 @@ const qListNav=document.querySelector('[data-tab="list"] span');if(qListNav)qLis
 new MutationObserver(records=>{if(activeLanguage==='en')return;records.forEach(record=>record.addedNodes.forEach(node=>{if(node.nodeType===Node.ELEMENT_NODE)localizePage(node);else if(node.nodeType===Node.TEXT_NODE&&node.parentElement)localizePage(node.parentElement)}))}).observe(document.body,{childList:true,subtree:true});
 mountAdShell();startLaunchAd();
 renderQueueList();renderHostQueue();
+firebaseStartup?.then(openLinkedQueue);
 const savedLanguage=localStorage.getItem('letsQ.language');
 if(savedLanguage&&translations[savedLanguage]){activeLanguage=savedLanguage;document.documentElement.lang=savedLanguage;localizePage()}
 

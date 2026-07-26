@@ -1,0 +1,30 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function isHost(queueId) {
+      return signedIn() && get(/databases/$(database)/documents/queues/$(queueId)).data.hostUid == request.auth.uid;
+    }
+
+    match /queues/{queueId} {
+      // A guest may only discover queues that are explicitly open.
+      allow read: if resource.data.status == 'open' || (signedIn() && resource.data.hostUid == request.auth.uid);
+      allow create: if signedIn() && request.resource.data.hostUid == request.auth.uid;
+      // Hosts can edit their queue. A guest can only atomically reserve one ticket number.
+      allow update: if (signedIn() && resource.data.hostUid == request.auth.uid)
+        || (signedIn() && resource.data.status == 'open'
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nextTicket', 'updatedAt'])
+            && request.resource.data.nextTicket == resource.data.nextTicket + 1);
+      allow delete: if signedIn() && resource.data.hostUid == request.auth.uid;
+
+      match /tickets/{ticketId} {
+        allow read: if signedIn() && (isHost(queueId) || resource.data.ownerUid == request.auth.uid);
+        allow create: if signedIn() && request.resource.data.ownerUid == request.auth.uid;
+        allow update: if isHost(queueId)
+          || (signedIn() && resource.data.ownerUid == request.auth.uid
+              && request.resource.data.ownerUid == request.auth.uid);
+        allow delete: if isHost(queueId) || (signedIn() && resource.data.ownerUid == request.auth.uid);
+      }
+    }
+  }
+}

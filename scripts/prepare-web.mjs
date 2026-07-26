@@ -11,6 +11,7 @@ const publicFiles = [
   'privacy.html',
   'delete-data.html',
   'runtime-config.js',
+  'firebase-config.js',
   'app-ads.txt',
   'i18n-extra.js',
   'app-shell.js',
@@ -23,6 +24,10 @@ const publicFiles = [
   'ticket-share-demo.svg'
 ];
 const vendorFiles = [
+  {
+    source: resolve(root, 'vendor/firebase.js'),
+    destination: 'vendor/firebase.js'
+  },
   {
     source: resolve(root, 'vendor/supabase.js'),
     destination: 'vendor/supabase.js'
