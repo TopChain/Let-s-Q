@@ -25,6 +25,7 @@ import androidx.coordinatorlayout.widget.CoordinatorLayout;
  */
 public final class LetsQHouseAds {
     private static final long FULL_PAGE_AUTO_CLOSE_MS = 5000L;
+    private static final long BANNER_ROTATION_MS = 8000L;
 
     private static final String[][] BANNER_MESSAGES = {
         {"Private queues. No account required.", "Join with a QR or short code and keep personal details private."},
@@ -37,8 +38,19 @@ public final class LetsQHouseAds {
     private final ViewGroup parent;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private View bannerView;
+    private TextView bannerTitle;
+    private TextView bannerBody;
     private Dialog fullPageDialog;
     private int bannerMessageIndex = 0;
+
+    private final Runnable rotateBanner = new Runnable() {
+        @Override
+        public void run() {
+            if (bannerView == null || bannerTitle == null || bannerBody == null) return;
+            applyNextBannerMessage();
+            handler.postDelayed(this, BANNER_ROTATION_MS);
+        }
+    };
 
     public LetsQHouseAds(Activity activity, ViewGroup parent) {
         this.activity = activity;
@@ -54,21 +66,16 @@ public final class LetsQHouseAds {
         card.setOrientation(LinearLayout.VERTICAL);
         card.setGravity(Gravity.CENTER_VERTICAL);
         card.setPadding(dp(18), dp(10), dp(18), dp(10));
-        card.setBackground(roundedBackground(Color.rgb(241, 247, 255), dp(0)));
+        card.setBackground(roundedBackground(Color.rgb(241, 247, 255), 0));
         card.setContentDescription("Let’s Q tip");
 
-        String[] message = BANNER_MESSAGES[bannerMessageIndex % BANNER_MESSAGES.length];
-        bannerMessageIndex++;
-
         TextView title = new TextView(activity);
-        title.setText(message[0]);
         title.setTextColor(Color.rgb(16, 37, 66));
         title.setTextSize(15);
         title.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         title.setMaxLines(1);
 
         TextView body = new TextView(activity);
-        body.setText(message[1]);
         body.setTextColor(Color.rgb(74, 91, 117));
         body.setTextSize(12);
         body.setMaxLines(1);
@@ -89,15 +96,24 @@ public final class LetsQHouseAds {
         params.gravity = Gravity.BOTTOM;
         parent.addView(card, params);
         card.bringToFront();
+
         bannerView = card;
+        bannerTitle = title;
+        bannerBody = body;
+        applyNextBannerMessage();
+        handler.postDelayed(rotateBanner, BANNER_ROTATION_MS);
         return height;
     }
 
     public void hideBanner() {
-        if (bannerView == null) return;
-        ViewGroup owner = (ViewGroup) bannerView.getParent();
-        if (owner != null) owner.removeView(bannerView);
+        handler.removeCallbacks(rotateBanner);
+        if (bannerView != null) {
+            ViewGroup owner = (ViewGroup) bannerView.getParent();
+            if (owner != null) owner.removeView(bannerView);
+        }
         bannerView = null;
+        bannerTitle = null;
+        bannerBody = null;
     }
 
     public void showFullPage(String kicker, String titleText, String bodyText, Runnable finished) {
@@ -216,6 +232,14 @@ public final class LetsQHouseAds {
         hideBanner();
         dismissFullPage(false);
         handler.removeCallbacksAndMessages(null);
+    }
+
+    private void applyNextBannerMessage() {
+        if (bannerTitle == null || bannerBody == null) return;
+        String[] message = BANNER_MESSAGES[bannerMessageIndex % BANNER_MESSAGES.length];
+        bannerMessageIndex++;
+        bannerTitle.setText(message[0]);
+        bannerBody.setText(message[1]);
     }
 
     private void dismissFullPage(boolean runDismissListener) {
