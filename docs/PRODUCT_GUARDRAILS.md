@@ -10,6 +10,18 @@ Let’s Q exists to make a physical line optional.
 
 This flow is the product. New features must make it faster, clearer, safer, or more reliable; they must not turn Let’s Q into an account-heavy reservation, CRM, social, or advertising app.
 
+## Production backend record
+
+The intended production Supabase project for Let’s Q is:
+
+- Project name: `Let's Q`
+- Project ref / ID: `exqsdvzgoivacpqqdott`
+- Region: `us-west-2`
+
+The older project ref `tjjvltvqzjgulgcknozk` is legacy and must not be treated as the production source of truth after the migration is completed and verified.
+
+Do not switch the app runtime configuration until the new project is healthy, the Let’s Q schema/migrations are applied, publishable API access is verified, and a live queue smoke test passes.
+
 ## Non-negotiables
 
 1. **No account required for Queuers.** Do not require a name, phone number, email address, social account, or location to take a number.
