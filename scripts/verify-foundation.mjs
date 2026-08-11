@@ -23,6 +23,8 @@ const required = [
   'supabase/migrations/20260811_support_current_app_compatibility.sql',
   'supabase/migrations/20260811_enforce_no_show_policies.sql',
   'supabase/migrations/20260811_fix_no_show_rls_transition.sql',
+  'ios/App/App/PrivacyInfo.xcprivacy',
+  'ios/App/App.xcodeproj/project.pbxproj',
   'www/index.html',
   'www/app.html',
   'www/firebase-config.js',
@@ -62,6 +64,8 @@ const hardeningSource = readFileSync(resolve(root, 'scripts/ui-hardening-entry.j
 if (!hardeningSource.includes("type === 'staff' || type === 'settings'")) throw new Error('Demo-only staff/settings controls are not blocked.');
 if (!hardeningSource.includes('This release does not send push notifications')) throw new Error('The close-queue UI can still imply nonexistent push notifications.');
 if (!hardeningSource.includes('A real anonymous ticket number is assigned')) throw new Error('The walk-in UI can still show a fake ticket before creation.');
+if (!hardeningSource.includes("getPlatform?.() === 'ios'")) throw new Error('Native iOS report monetization is not guarded.');
+if (!hardeningSource.includes('Q Report is included on iPhone in this build.')) throw new Error('The iOS build can still imply a fake report charge or ad.');
 
 const productionEntry = readFileSync(resolve(root, 'scripts/production-bridge-entry.js'), 'utf8');
 for (const source of ['./firebase-browser-entry.js', './report-browser-entry.js', './ui-hardening-entry.js']) {
@@ -77,10 +81,17 @@ if (!compatConfig.includes('exqsdvzgoivacpqqdott.supabase.co')) throw new Error(
 const runtimeConfig = readFileSync(resolve(root, 'runtime-config.js'), 'utf8');
 if (!runtimeConfig.includes('exqsdvzgoivacpqqdott.supabase.co')) throw new Error('The runtime config is not pointed at the canonical Let’s Q Supabase project.');
 
+const iosPrivacy = readFileSync(resolve(root, 'ios/App/App/PrivacyInfo.xcprivacy'), 'utf8');
+for (const key of ['NSPrivacyTracking', 'NSPrivacyCollectedDataTypeUserID', 'NSPrivacyCollectedDataTypeOtherUserContent', 'NSPrivacyCollectedDataTypeProductInteraction']) {
+  if (!iosPrivacy.includes(key)) throw new Error(`The iOS privacy manifest is missing ${key}.`);
+}
+const xcodeProject = readFileSync(resolve(root, 'ios/App/App.xcodeproj/project.pbxproj'), 'utf8');
+if (!xcodeProject.includes('PrivacyInfo.xcprivacy in Resources')) throw new Error('The iOS privacy manifest is not bundled in the app target.');
+
 const privacy = readFileSync(resolve(root, 'www/privacy.html'), 'utf8');
 if (!privacy.includes('letsqsupportteam@gmail.com')) throw new Error('The published privacy policy is missing the support contact.');
 
 const deletion = readFileSync(resolve(root, 'www/delete-data.html'), 'utf8');
 if (!deletion.includes('letsqsupportteam@gmail.com')) throw new Error('The published data deletion page is missing the support contact.');
 
-console.log('Shared mobile foundation check: OK — Supabase queue, real reports, PDF export, and production UI hardening are bundled.');
+console.log('Shared mobile foundation check: OK — Supabase queue, real reports/PDF, production UI hardening, and iOS privacy guards are bundled.');
