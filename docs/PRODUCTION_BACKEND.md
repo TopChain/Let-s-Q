@@ -2,7 +2,7 @@
 
 ## Canonical Supabase project
 
-The intended production backend is now:
+The production backend is:
 
 - Project name: `Let's Q`
 - Project ref: `exqsdvzgoivacpqqdott`
@@ -41,11 +41,16 @@ Additional hardening applied on 2026-08-11:
 
 The `public` app tables were empty after the verification cleanup. The preserved prototype rows remain only in `letsq_legacy`.
 
-## Required Auth setting before runtime cutover
+## Runtime cutover status
 
-The browser app creates a private Host identity using Supabase `signInAnonymously()`. Supabase hosted projects have anonymous sign-ins disabled by default, so **Authentication → Providers/General → Allow anonymous sign-ins must be enabled on this project before the runtime cutover is deployed**.
+**Completed on 2026-08-11.**
 
-This account setting is deliberately a cutover gate. Do not point the live app at the new project until anonymous Host sign-in has been enabled and a real-device Host creation test succeeds.
+- Supabase `Allow anonymous sign-ins` is enabled for `exqsdvzgoivacpqqdott`.
+- `runtime-config.js` and the legacy-named compatibility config both point to `exqsdvzgoivacpqqdott`.
+- The Supabase cutover was merged to `main` in commit `3d5faa2ac2e37a07d60ee2051807ad35cd2212df`.
+- The production-foundation GitHub Actions run on that merge commit completed successfully.
+
+The browser app creates a private Host identity using Supabase `signInAnonymously()`. Queuers remain accountless.
 
 Supabase recommends CAPTCHA/Turnstile for anonymous-sign-in abuse prevention. Add that protection before materially increasing public traffic.
 
@@ -53,6 +58,8 @@ Supabase recommends CAPTCHA/Turnstile for anonymous-sign-in abuse prevention. Ad
 
 Supabase may warn that the public Queuer RPCs are `SECURITY DEFINER` functions executable by `anon`/`authenticated`. This is intentional for this architecture: direct table access is denied, and these RPCs expose only narrow operations and limited projections. Ticket-specific operations require a random bearer `access_token`; queue discovery requires an unguessable public UUID or short join code.
 
+Supabase may also warn that authenticated/anonymous Host users can access owner-scoped `public` policies after anonymous sign-ins are enabled. This is expected: anonymous Host identities use the `authenticated` Postgres role and RLS limits them to their own Host-owned rows.
+
 The archived `letsq_legacy` tables have RLS enabled with explicit deny policies for `anon` and `authenticated`, and those roles also have no schema/table grants. They are retained only for recovery/history and are outside the app access path.
 
-Do not silence the intentional public-RPC warnings by granting anonymous table access.
+Do not silence intentional warnings by granting anonymous table access.
