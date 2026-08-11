@@ -33,6 +33,7 @@ Additional hardening applied on 2026-08-11:
 - added the production UI compatibility fields `event_name` and `accepting_entries`
 - enforced Host-selected no-show behavior in the database, including cancel, defer, timed hold, third-strike cancellation, and queue-close cleanup
 - fixed the hold transition so the Host UPDATE passes RLS before an unexpired hold becomes intentionally hidden from the Host waiting-list query
+- added explicit deny RLS policies to both archived legacy tables, in addition to their revoked client grants
 - verified anonymous clients cannot SELECT queue tables directly
 - verified public queue lookup, join, ticket status, cancellation, Host RLS updates, anonymous rating, hashed secret codes, no-show transitions, hidden hold behavior, queue close cleanup, and cleanup using synthetic test data
 - verified the report query surface under Host RLS using synthetic tickets and ratings, then removed all synthetic production rows
@@ -52,6 +53,6 @@ Supabase recommends CAPTCHA/Turnstile for anonymous-sign-in abuse prevention. Ad
 
 Supabase may warn that the public Queuer RPCs are `SECURITY DEFINER` functions executable by `anon`/`authenticated`. This is intentional for this architecture: direct table access is denied, and these RPCs expose only narrow operations and limited projections. Ticket-specific operations require a random bearer `access_token`; queue discovery requires an unguessable public UUID or short join code.
 
-The archived `letsq_legacy` tables can also appear in advisor output because they intentionally do not use RLS. They are not in the app access path: `anon` and `authenticated` have no schema/table privileges there.
+The archived `letsq_legacy` tables have RLS enabled with explicit deny policies for `anon` and `authenticated`, and those roles also have no schema/table grants. They are retained only for recovery/history and are outside the app access path.
 
-Do not silence those warnings by granting anonymous table access.
+Do not silence the intentional public-RPC warnings by granting anonymous table access.
