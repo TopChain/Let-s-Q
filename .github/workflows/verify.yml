@@ -20,6 +20,8 @@ jobs:
       - run: pnpm run web:build
       - run: pnpm run check
       - run: node scripts/simulate-scale.mjs
+      - name: Sync Capacitor Android project
+        run: pnpm exec cap sync android
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
