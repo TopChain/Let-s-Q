@@ -11,6 +11,43 @@ function hideUnimplementedControls() {
   }
 }
 
+function isNativeIos() {
+  try {
+    return Boolean(window.Capacitor?.isNativePlatform?.()) && window.Capacitor?.getPlatform?.() === 'ios';
+  } catch {
+    return false;
+  }
+}
+
+function hardenIosReportMonetization() {
+  if (!isNativeIos()) return;
+  const paywall = document.getElementById('reportPaywall');
+  if (!paywall) return;
+
+  for (const button of paywall.querySelectorAll('button')) {
+    const label = button.textContent || '';
+    if (label.includes('Subscribe') || label.includes('Watch an ad')) button.hidden = true;
+  }
+
+  if (!paywall.querySelector('[data-ios-report-note]')) {
+    const note = document.createElement('div');
+    note.dataset.iosReportNote = 'true';
+    note.className = 'privacy-strip';
+    note.innerHTML = '<span class="privacy-lock">✓</span><span><b>Q Report is included on iPhone in this build.</b>No subscription or ad is required until native iOS billing and ads are enabled.</span>';
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'btn primary wide';
+    button.textContent = 'View report';
+    button.onclick = () => {
+      const state = typeof appState !== 'undefined' ? appState : null;
+      if (state) state.reportUnlocked = true;
+      window.renderReport?.();
+      window.renderLetsQReport?.();
+    };
+    paywall.append(note, button);
+  }
+}
+
 function replaceWalkInModal() {
   const content = document.getElementById('modalContent');
   if (!content) return;
@@ -37,6 +74,7 @@ function clarifyCloseQueueModal() {
 
 window.addEventListener('load', () => {
   hideUnimplementedControls();
+  hardenIosReportMonetization();
 
   const previousOpenModal = window.openModal;
   if (typeof previousOpenModal === 'function') {
@@ -51,7 +89,11 @@ window.addEventListener('load', () => {
     };
   }
 
-  // Some Host controls are rendered again after startup; keep demo-only controls hidden.
-  const observer = new MutationObserver(() => hideUnimplementedControls());
+  // Some Host/report controls are rendered again after startup; keep production
+  // truthfulness guards applied after every render.
+  const observer = new MutationObserver(() => {
+    hideUnimplementedControls();
+    hardenIosReportMonetization();
+  });
   observer.observe(document.body, { childList: true, subtree: true });
 });
