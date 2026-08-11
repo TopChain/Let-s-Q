@@ -13,6 +13,7 @@ const publicFiles = [
   'runtime-config.js',
   'firebase-config.js',
   'app-ads.txt',
+  'robots.txt',
   'i18n-extra.js',
   'app-shell.js',
   'live-queue.js',
