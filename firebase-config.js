@@ -1,10 +1,8 @@
-// Paste the Firebase web-app configuration from Firebase Console here.
-// These values are public identifiers. Never put a service-account key in this file.
+// Compatibility configuration for the current app.html.
+// The global name is kept so the existing UI can be migrated without editing
+// the 2 MB HTML bundle in place. Queue data is now served by Supabase, not Firebase.
+// This is a public browser key. Never put a service-role key or other secret here.
 window.LetsQFirebaseConfig = {
-  apiKey: 'AIzaSyAycSwsLnRICfYhhaeRlyqn4U9LFCeNXiA',
-  authDomain: 'let-s-q-441e3.firebaseapp.com',
-  projectId: 'let-s-q-441e3',
-  storageBucket: 'let-s-q-441e3.firebasestorage.app',
-  messagingSenderId: '1072685330045',
-  appId: '1:1072685330045:web:d281328e95197b8ea4cb14'
+  supabaseUrl: 'https://exqsdvzgoivacpqqdott.supabase.co',
+  supabaseAnonKey: 'sb_publishable_GhOAIYMrWBJutq6Y8SJoyQ_Q4ZcPQk1'
 };
