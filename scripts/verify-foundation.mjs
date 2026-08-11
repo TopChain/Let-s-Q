@@ -15,6 +15,7 @@ const required = [
   'app-shell.js',
   'scripts/firebase-browser-entry.js',
   'scripts/report-browser-entry.js',
+  'scripts/ui-hardening-entry.js',
   'scripts/production-bridge-entry.js',
   'supabase/schema.sql',
   'supabase/migrations/20260717_public_queue_details.sql',
@@ -57,8 +58,14 @@ if (!reportSource.includes("api.from('tickets')")) throw new Error('Q Report is 
 if (!reportSource.includes("api.from('ratings')")) throw new Error('Q Report is not reading live anonymous ratings.');
 if (!reportSource.includes('Export report as PDF')) throw new Error('Q Report is missing PDF export.');
 
+const hardeningSource = readFileSync(resolve(root, 'scripts/ui-hardening-entry.js'), 'utf8');
+if (!hardeningSource.includes("openModal('staff')") || !hardeningSource.includes("openModal('settings')")) throw new Error('Demo-only staff/settings controls are not hidden.');
+if (!hardeningSource.includes('This release does not send push notifications')) throw new Error('The close-queue UI can still imply nonexistent push notifications.');
+
 const productionEntry = readFileSync(resolve(root, 'scripts/production-bridge-entry.js'), 'utf8');
-if (!productionEntry.includes("./firebase-browser-entry.js") || !productionEntry.includes("./report-browser-entry.js")) throw new Error('The production bridge does not bundle both queue and report runtimes.');
+for (const source of ['./firebase-browser-entry.js', './report-browser-entry.js', './ui-hardening-entry.js']) {
+  if (!productionEntry.includes(source)) throw new Error(`The production bridge is missing ${source}.`);
+}
 
 const buildVendors = readFileSync(resolve(root, 'scripts/build-vendors.mjs'), 'utf8');
 if (!buildVendors.includes('production-bridge-entry.js')) throw new Error('vendor/firebase.js is not built from the production Supabase bridge.');
@@ -75,4 +82,4 @@ if (!privacy.includes('letsqsupportteam@gmail.com')) throw new Error('The publis
 const deletion = readFileSync(resolve(root, 'www/delete-data.html'), 'utf8');
 if (!deletion.includes('letsqsupportteam@gmail.com')) throw new Error('The published data deletion page is missing the support contact.');
 
-console.log('Shared mobile foundation check: OK — Supabase queue + live aggregate reports are bundled.');
+console.log('Shared mobile foundation check: OK — Supabase queue, real reports, PDF export, and production UI hardening are bundled.');
