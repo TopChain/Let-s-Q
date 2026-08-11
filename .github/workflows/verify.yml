@@ -22,10 +22,10 @@ jobs:
       - run: node scripts/simulate-scale.mjs
       - name: Sync Capacitor Android project
         run: pnpm exec cap sync android
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: '21'
           cache: gradle
       - name: Compile Android debug app
         working-directory: android
