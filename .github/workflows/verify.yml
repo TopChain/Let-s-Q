@@ -20,3 +20,11 @@ jobs:
       - run: pnpm run web:build
       - run: pnpm run check
       - run: node scripts/simulate-scale.mjs
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+      - name: Compile Android debug app
+        working-directory: android
+        run: ./gradlew assembleDebug --no-daemon
