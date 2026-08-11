@@ -1,0 +1,9 @@
+# Let AdMob verify the developer site's app-ads.txt file.
+User-agent: Google-adstxt
+Disallow:
+
+User-agent: Mediapartners-Google
+Disallow:
+
+User-agent: Googlebot
+Disallow:
