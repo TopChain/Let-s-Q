@@ -32,13 +32,14 @@ grant all on table public.host_profiles, public.queues, public.queue_staff,
 
 -- PostgreSQL grants EXECUTE to PUBLIC on functions by default. Close that surface,
 -- then re-open only the narrow RPCs the app intentionally exposes.
+-- The rating RPC is handled by 20260811_normalize_rating_rpc_numbers.sql so this
+-- migration stays order-safe regardless of whether that signature is normalized first.
 revoke all on function public.generate_queue_join_code() from public, anon;
 revoke all on function public.join_queue(uuid, text, text) from public;
 revoke all on function public.get_my_ticket(uuid) from public;
 revoke all on function public.get_public_queue(uuid) from public;
 revoke all on function public.get_public_queue_by_code(text) from public;
 revoke all on function public.cancel_my_ticket(uuid) from public;
-revoke all on function public.submit_anonymous_rating(uuid, smallint, smallint, smallint) from public;
 
 grant execute on function public.generate_queue_join_code() to authenticated, service_role;
 grant execute on function public.join_queue(uuid, text, text) to anon, authenticated, service_role;
@@ -46,4 +47,3 @@ grant execute on function public.get_my_ticket(uuid) to anon, authenticated, ser
 grant execute on function public.get_public_queue(uuid) to anon, authenticated, service_role;
 grant execute on function public.get_public_queue_by_code(text) to anon, authenticated, service_role;
 grant execute on function public.cancel_my_ticket(uuid) to anon, authenticated, service_role;
-grant execute on function public.submit_anonymous_rating(uuid, smallint, smallint, smallint) to anon, authenticated, service_role;
