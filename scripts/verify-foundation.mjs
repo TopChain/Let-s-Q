@@ -59,8 +59,9 @@ if (!reportSource.includes("api.from('ratings')")) throw new Error('Q Report is 
 if (!reportSource.includes('Export report as PDF')) throw new Error('Q Report is missing PDF export.');
 
 const hardeningSource = readFileSync(resolve(root, 'scripts/ui-hardening-entry.js'), 'utf8');
-if (!hardeningSource.includes("openModal('staff')") || !hardeningSource.includes("openModal('settings')")) throw new Error('Demo-only staff/settings controls are not hidden.');
+if (!hardeningSource.includes("type === 'staff' || type === 'settings'")) throw new Error('Demo-only staff/settings controls are not blocked.');
 if (!hardeningSource.includes('This release does not send push notifications')) throw new Error('The close-queue UI can still imply nonexistent push notifications.');
+if (!hardeningSource.includes('A real anonymous ticket number is assigned')) throw new Error('The walk-in UI can still show a fake ticket before creation.');
 
 const productionEntry = readFileSync(resolve(root, 'scripts/production-bridge-entry.js'), 'utf8');
 for (const source of ['./firebase-browser-entry.js', './report-browser-entry.js', './ui-hardening-entry.js']) {
