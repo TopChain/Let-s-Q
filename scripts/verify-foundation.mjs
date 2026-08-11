@@ -14,10 +14,14 @@ const required = [
   'live-queue.js',
   'app-shell.js',
   'scripts/firebase-browser-entry.js',
+  'scripts/report-browser-entry.js',
+  'scripts/production-bridge-entry.js',
   'supabase/schema.sql',
   'supabase/migrations/20260717_public_queue_details.sql',
   'supabase/migrations/20260718_short_queue_codes.sql',
   'supabase/migrations/20260811_support_current_app_compatibility.sql',
+  'supabase/migrations/20260811_enforce_no_show_policies.sql',
+  'supabase/migrations/20260811_fix_no_show_rls_transition.sql',
   'www/index.html',
   'www/app.html',
   'www/firebase-config.js',
@@ -48,6 +52,17 @@ if (!bridgeSource.includes("from '@supabase/supabase-js'")) throw new Error('The
 if (/from ['"]firebase\//.test(bridgeSource)) throw new Error('Firebase queue SDK imports were reintroduced into the production bridge.');
 if (!bridgeSource.includes("get backend() { return 'supabase'; }")) throw new Error('The compatibility bridge does not declare Supabase as its queue backend.');
 
+const reportSource = readFileSync(resolve(root, 'scripts/report-browser-entry.js'), 'utf8');
+if (!reportSource.includes("api.from('tickets')")) throw new Error('Q Report is not reading live ticket aggregates.');
+if (!reportSource.includes("api.from('ratings')")) throw new Error('Q Report is not reading live anonymous ratings.');
+if (!reportSource.includes('Export report as PDF')) throw new Error('Q Report is missing PDF export.');
+
+const productionEntry = readFileSync(resolve(root, 'scripts/production-bridge-entry.js'), 'utf8');
+if (!productionEntry.includes("./firebase-browser-entry.js") || !productionEntry.includes("./report-browser-entry.js")) throw new Error('The production bridge does not bundle both queue and report runtimes.');
+
+const buildVendors = readFileSync(resolve(root, 'scripts/build-vendors.mjs'), 'utf8');
+if (!buildVendors.includes('production-bridge-entry.js')) throw new Error('vendor/firebase.js is not built from the production Supabase bridge.');
+
 const compatConfig = readFileSync(resolve(root, 'firebase-config.js'), 'utf8');
 if (!compatConfig.includes('exqsdvzgoivacpqqdott.supabase.co')) throw new Error('The compatibility config is not pointed at the canonical Let’s Q Supabase project.');
 
@@ -60,4 +75,4 @@ if (!privacy.includes('letsqsupportteam@gmail.com')) throw new Error('The publis
 const deletion = readFileSync(resolve(root, 'www/delete-data.html'), 'utf8');
 if (!deletion.includes('letsqsupportteam@gmail.com')) throw new Error('The published data deletion page is missing the support contact.');
 
-console.log('Shared mobile foundation check: OK — canonical queue backend is Supabase.');
+console.log('Shared mobile foundation check: OK — Supabase queue + live aggregate reports are bundled.');
