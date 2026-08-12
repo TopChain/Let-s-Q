@@ -67,6 +67,14 @@ if (!hardeningSource.includes('A real anonymous ticket number is assigned')) thr
 if (!hardeningSource.includes("getPlatform?.() === 'ios'")) throw new Error('Native iOS report monetization is not guarded.');
 if (!hardeningSource.includes('Q Report is included on iPhone in this build.')) throw new Error('The iOS build can still imply a fake report charge or ad.');
 
+const liveQueueSource = readFileSync(resolve(root, 'live-queue.js'), 'utf8');
+const refreshTicketMatch = liveQueueSource.match(/async function refreshTicket\([\s\S]*?\n  }\n\n  async function refreshSavedTickets/);
+if (!refreshTicketMatch) throw new Error('Could not locate the live Queuer refresh path.');
+if (refreshTicketMatch[0].includes("api.rpc('get_public_queue'")) throw new Error('Queuer polling regressed to a second public-queue RPC.');
+if (!refreshTicketMatch[0].includes('current.now_serving')) throw new Error('Queuer polling is not using the consolidated ticket status payload.');
+if (!liveQueueSource.includes('if (document.hidden) return;')) throw new Error('Background queue polling protection is missing.');
+if (!liveQueueSource.includes('}, 15000);')) throw new Error('Queuer polling cadence is not hardened to 15 seconds.');
+
 const productionEntry = readFileSync(resolve(root, 'scripts/production-bridge-entry.js'), 'utf8');
 for (const source of ['./firebase-browser-entry.js', './report-browser-entry.js', './ui-hardening-entry.js']) {
   if (!productionEntry.includes(source)) throw new Error(`The production bridge is missing ${source}.`);
@@ -94,4 +102,4 @@ if (!privacy.includes('letsqsupportteam@gmail.com')) throw new Error('The publis
 const deletion = readFileSync(resolve(root, 'www/delete-data.html'), 'utf8');
 if (!deletion.includes('letsqsupportteam@gmail.com')) throw new Error('The published data deletion page is missing the support contact.');
 
-console.log('Shared mobile foundation check: OK — Supabase queue, real reports/PDF, production UI hardening, and iOS privacy guards are bundled.');
+console.log('Shared mobile foundation check: OK — Supabase queue, consolidated polling, real reports/PDF, production UI hardening, and iOS privacy guards are bundled.');
