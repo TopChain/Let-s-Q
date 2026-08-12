@@ -34,8 +34,13 @@ for (const queue of queues) {
   unlimitedCountComparisons += (n * (n - 1)) / 2;
 }
 
-const currentQueuerRpcPerRefresh = queuers * 2; // get_my_ticket + get_public_queue
-const consolidatedQueuerRpcPerRefresh = queuers;
+// Previous Queuer polling called get_my_ticket + get_public_queue every 10s.
+// The hardened client calls only get_my_ticket every 15s and skips polling while
+// the document is hidden/backgrounded.
+const previousQueuerRpcPerRefresh = queuers * 2;
+const hardenedQueuerRpcPerRefresh = queuers;
+const previousWorstCaseRpcPerSecond = previousQueuerRpcPerRefresh / 10;
+const hardenedWorstCaseRpcPerSecond = hardenedQueuerRpcPerRefresh / 15;
 
 const result = {
   scenario: { hosts, queuers },
@@ -50,12 +55,16 @@ const result = {
   architectureEstimates: {
     oldUnlimitedJoinCountComparisons: unlimitedCountComparisons,
     optimizedUnlimitedJoinCountComparisons: 0,
-    currentQueuerRpcPer10SecondRefresh: currentQueuerRpcPerRefresh,
-    possibleConsolidatedQueuerRpcPer10SecondRefresh: consolidatedQueuerRpcPerRefresh
+    previousQueuerRpcPer10SecondRefresh: previousQueuerRpcPerRefresh,
+    hardenedQueuerRpcPer15SecondRefresh: hardenedQueuerRpcPerRefresh,
+    previousWorstCaseQueuerRpcPerSecond,
+    hardenedWorstCaseQueuerRpcPerSecond,
+    worstCaseQueuerRpcReductionPercent: Math.round((1 - hardenedWorstCaseRpcPerSecond / previousWorstCaseRpcPerSecond) * 100)
   },
   notes: [
     'Ticket uniqueness here models the database row-lock/counter design; it is not a production benchmark.',
-    'RPC estimates assume all simulated Queuers are simultaneously on the live ticket screen.',
+    'RPC estimates assume every simulated Queuer is simultaneously viewing a live ticket with the app visible.',
+    'Background/hidden clients now pause polling, so real steady-state request volume should be lower than this worst-case estimate.',
     'Real database latency, contention, network jitter, retries, and Supabase plan limits require staging load tests.'
   ]
 };
