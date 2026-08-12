@@ -57,8 +57,8 @@ const result = {
     optimizedUnlimitedJoinCountComparisons: 0,
     previousQueuerRpcPer10SecondRefresh: previousQueuerRpcPerRefresh,
     hardenedQueuerRpcPer15SecondRefresh: hardenedQueuerRpcPerRefresh,
-    previousWorstCaseQueuerRpcPerSecond,
-    hardenedWorstCaseQueuerRpcPerSecond,
+    previousWorstCaseQueuerRpcPerSecond: previousWorstCaseRpcPerSecond,
+    hardenedWorstCaseQueuerRpcPerSecond: hardenedWorstCaseRpcPerSecond,
     worstCaseQueuerRpcReductionPercent: Math.round((1 - hardenedWorstCaseRpcPerSecond / previousWorstCaseRpcPerSecond) * 100)
   },
   notes: [
