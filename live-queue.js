@@ -220,14 +220,38 @@
       if (showError) window.toast(text(error, 'Could not refresh your ticket.'));
       return false;
     }
-    const updatedTicket = { ...ticket, status: current.status, ticketNumber: current.ticket_number, boothName: current.booth_name, queueName: current.queue_name };
+    // get_my_ticket already returns the live queue fields the Queuer screen
+    // needs. Keeping this refresh to one RPC prevents every active Queuer from
+    // immediately issuing a second get_public_queue request on each poll.
+    const updatedTicket = {
+      ...ticket,
+      publicId: current.public_queue_id || ticket.publicId,
+      status: current.status,
+      ticketNumber: current.ticket_number,
+      boothName: current.booth_name,
+      queueName: current.queue_name,
+      eventName: current.event_name || ticket.eventName,
+      joinCode: current.join_code || ticket.joinCode,
+      aheadCount: Number(current.ahead_count || 0),
+      nowServing: Number(current.now_serving || 0)
+    };
     upsertTicket(updatedTicket);
     state.selectedLiveTicket = updatedTicket.accessToken;
+    state.liveMode = true;
     state.livePublicQueueId = updatedTicket.publicId;
-    state.my = { n: current.ticket_number, code: updatedTicket.code, state: current.status, attempts: 0, note: '' };
+    state.liveJoinCode = current.join_code || state.liveJoinCode;
+    state.my = {
+      n: current.ticket_number,
+      code: updatedTicket.code,
+      state: current.status,
+      attempts: 0,
+      note: '',
+      ahead: Number(current.ahead_count || 0)
+    };
     state.booth = current.booth_name;
     state.queue = current.queue_name;
-    try { await openLiveQueue(updatedTicket.publicId, false); } catch { window.render(); }
+    state.now = Number(current.now_serving || 0);
+    window.render();
     return true;
   }
 
@@ -239,7 +263,18 @@
         const { data, error } = await api.rpc('get_my_ticket', { p_access_token: ticket.accessToken });
         const current = Array.isArray(data) ? data[0] : data;
         if (error || !current) return ticket;
-        return { ...ticket, status: current.status, ticketNumber: current.ticket_number, boothName: current.booth_name, queueName: current.queue_name };
+        return {
+          ...ticket,
+          publicId: current.public_queue_id || ticket.publicId,
+          status: current.status,
+          ticketNumber: current.ticket_number,
+          boothName: current.booth_name,
+          queueName: current.queue_name,
+          eventName: current.event_name || ticket.eventName,
+          joinCode: current.join_code || ticket.joinCode,
+          aheadCount: Number(current.ahead_count || 0),
+          nowServing: Number(current.now_serving || 0)
+        };
       } catch { return ticket; }
     }));
     saveTickets(refreshed);
