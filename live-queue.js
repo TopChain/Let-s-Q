@@ -220,14 +220,25 @@
       if (showError) window.toast(text(error, 'Could not refresh your ticket.'));
       return false;
     }
-    const updatedTicket = { ...ticket, status: current.status, ticketNumber: current.ticket_number, boothName: current.booth_name, queueName: current.queue_name };
+    const publicId = current.public_queue_id || ticket.publicId;
+    const updatedTicket = {
+      ...ticket,
+      publicId,
+      status: current.status,
+      ticketNumber: current.ticket_number,
+      boothName: current.booth_name,
+      queueName: current.queue_name
+    };
     upsertTicket(updatedTicket);
     state.selectedLiveTicket = updatedTicket.accessToken;
-    state.livePublicQueueId = updatedTicket.publicId;
+    state.livePublicQueueId = publicId;
+    state.liveJoinCode = current.join_code || state.liveJoinCode;
     state.my = { n: current.ticket_number, code: updatedTicket.code, state: current.status, attempts: 0, note: '' };
     state.booth = current.booth_name;
     state.queue = current.queue_name;
-    try { await openLiveQueue(updatedTicket.publicId, false); } catch { window.render(); }
+    state.now = Number(current.now_serving || 0);
+    state.aheadCount = Number(current.ahead_count || 0);
+    window.render();
     return true;
   }
 
@@ -575,8 +586,15 @@
   const pathParts = window.location.pathname.split('/').filter(Boolean);
   const initialJoin = new URLSearchParams(window.location.search).get('join') || (pathParts[0] === 'join' ? pathParts[1] : '');
   if (initialJoin) setTimeout(() => window.openScannedQueue(initialJoin), 0);
+  // Keep Host controls responsive, but do not spend network/database work while
+  // the app is backgrounded. Queuer status can tolerate a slightly slower poll;
+  // each refresh is now a single get_my_ticket RPC instead of two RPCs.
   setInterval(() => {
+    if (document.hidden) return;
     if (state.currentView === 'organizer') refreshHost();
-    if (state.currentView === 'queuer') refreshTicket();
   }, 10000);
+  setInterval(() => {
+    if (document.hidden) return;
+    if (state.currentView === 'queuer') refreshTicket();
+  }, 15000);
 })();
