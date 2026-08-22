@@ -28,6 +28,10 @@ function writeJson(key, value) {
   try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
 }
 
+function removeJson(key) {
+  try { localStorage.removeItem(key); } catch {}
+}
+
 function stateRef() {
   try { return typeof appState !== 'undefined' ? appState : null; } catch { return null; }
 }
@@ -85,6 +89,30 @@ function mapQueue(row) {
   };
 }
 
+function mapHostSnapshot(snapshot) {
+  const queue = snapshot?.queue;
+  if (!queue) return null;
+  const rows = snapshot?.tickets || [];
+  const called = rows.find(item => item.status === 'called' || item.status === 'ready');
+  return {
+    queue: {
+      ...mapQueue(queue),
+      nowServing: Number(called?.ticket_number || 0),
+      served: rows.filter(item => item.status === 'served').length
+    },
+    tickets: rows.map(item => ({
+      id: item.id,
+      ticketNumber: item.ticket_number,
+      status: ['waiting', 'called', 'ready', 'hold'].includes(item.status) ? 'waiting' : item.status,
+      remoteStatus: item.status,
+      secretCode: 'Anonymous guest',
+      note: item.private_note || '',
+      noShowAttempts: Number(item.no_show_attempts || 0),
+      queueOrder: Number(item.queue_order)
+    }))
+  };
+}
+
 function savedTickets() {
   const current = readJson(TICKETS_KEY, null);
   const value = Array.isArray(current) ? current : readJson(LEGACY_TICKETS_KEY, []);
@@ -126,6 +154,7 @@ async function init(config) {
     installHooks();
     syncSavedTicketsIntoUi();
     startTicketPolling();
+    void restoreSavedHostIntoUi();
   }, 0);
   // A Queuer does not create an account merely by opening the app. A random,
   // private Host device token is created lazily only when Host actions begin.
@@ -150,6 +179,55 @@ async function createQueue(queue) {
   hostQueueId = data.id;
   writeJson(HOST_QUEUE_KEY, hostQueueId);
   return mapQueue(data);
+}
+
+async function restoreHostQueue() {
+  if (!hostQueueId) return null;
+  await ensureHost();
+  const snapshot = await apiRequest('host-snapshot', { queueId: hostQueueId }, { host: true });
+  const mapped = mapHostSnapshot(snapshot);
+  if (mapped) return mapped;
+  hostQueueId = null;
+  removeJson(HOST_QUEUE_KEY);
+  removeJson(LEGACY_HOST_QUEUE_KEY);
+  return null;
+}
+
+async function restoreSavedHostIntoUi() {
+  try {
+    const snapshot = await restoreHostQueue();
+    const state = stateRef();
+    const queue = snapshot?.queue;
+    if (!state || !queue || queue.status !== 'open') return false;
+    const tickets = snapshot.tickets || [];
+    state.activeQueue = queue;
+    state.hostQueuePublished = true;
+    state.paused = queue.acceptingEntries === false;
+    state.waiting = tickets.filter(ticket => ticket.status === 'waiting').map(ticket => ({
+      id: ticket.id,
+      number: ticket.ticketNumber,
+      code: ticket.secretCode || 'PRIVATE',
+      note: ticket.note || 'No note',
+      time: 'Waiting'
+    }));
+    state.serving = queue.nowServing || 0;
+    state.served = queue.served || 0;
+    const eventTitle = document.getElementById('hostEventTitle');
+    const queueTitle = document.getElementById('hostQueueName');
+    if (eventTitle) eventTitle.textContent = queue.store || queue.event || 'Host';
+    if (queueTitle) queueTitle.textContent = queue.queue || 'Queue';
+    const pauseButton = document.getElementById('pauseBtn');
+    if (pauseButton) {
+      pauseButton.textContent = state.paused ? 'Resume scans' : 'Pause scans';
+      pauseButton.className = `btn ${state.paused ? 'danger' : 'secondary'} small`;
+    }
+    window.renderHostQueue?.();
+    window.watchPublishedQueue?.();
+    return true;
+  } catch (error) {
+    console.warn('Let’s Q Host restore failed', error);
+    return false;
+  }
 }
 
 async function updateQueue(queueId, changes = {}) {
@@ -241,27 +319,8 @@ function watchHostQueue(queueId, callback) {
     try {
       await ensureHost();
       const snapshot = await apiRequest('host-snapshot', { queueId }, { host: true });
-      const queue = snapshot?.queue;
-      const tickets = snapshot?.tickets;
-      if (!queue) return;
-      const rows = tickets || [];
-      const called = rows.find(item => item.status === 'called' || item.status === 'ready');
-      const compatQueue = {
-        ...mapQueue(queue),
-        nowServing: Number(called?.ticket_number || 0),
-        served: rows.filter(item => item.status === 'served').length
-      };
-      const compatTickets = rows.map(item => ({
-        id: item.id,
-        ticketNumber: item.ticket_number,
-        status: ['waiting', 'called', 'ready', 'hold'].includes(item.status) ? 'waiting' : item.status,
-        remoteStatus: item.status,
-        secretCode: 'Anonymous guest',
-        note: item.private_note || '',
-        noShowAttempts: Number(item.no_show_attempts || 0),
-        queueOrder: Number(item.queue_order)
-      }));
-      callback({ queue: compatQueue, tickets: compatTickets });
+      const mapped = mapHostSnapshot(snapshot);
+      if (mapped) callback(mapped);
     } catch (error) {
       console.warn('Let’s Q Host refresh failed', error);
     } finally {
@@ -512,6 +571,7 @@ function installHooks() {
 window.LetsQFirebase = {
   init,
   createQueue,
+  restoreHostQueue,
   updateQueue,
   updateTicket,
   findQueueByCode,
