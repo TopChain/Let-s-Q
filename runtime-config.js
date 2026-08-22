@@ -5,7 +5,9 @@
 window.LETS_Q_CONFIG = {
   demoMode: false,
   publicAppUrl: 'https://soft-bonbon-62fdc2.netlify.app',
-  apiBaseUrl: 'https://soft-bonbon-62fdc2.netlify.app/.netlify/functions/letsq-api'
+  apiBaseUrl: /^https?:$/.test(window.location.protocol) && !['localhost', '127.0.0.1'].includes(window.location.hostname)
+    ? new URL('/.netlify/functions/letsq-api', window.location.origin).toString()
+    : 'https://soft-bonbon-62fdc2.netlify.app/.netlify/functions/letsq-api'
 };
 
 /*
