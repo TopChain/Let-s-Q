@@ -6,7 +6,7 @@
 - iPhone/iPad project: `ios/`
 - Shared web app used by both: `www/` (built from the root web files)
 - App name: Let’s Q
-- Store package/bundle ID: `app.letsq.queue`.
+- Android package ID: `app.letsq.queue`; iOS bundle ID: `com.letsq.app`.
 
 ## One action needed on this Mac now
 
