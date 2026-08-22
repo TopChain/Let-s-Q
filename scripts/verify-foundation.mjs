@@ -46,6 +46,10 @@ const app = readFileSync(resolve(root, 'www/app.html'), 'utf8');
 if (!app.includes('startLaunchAd')) throw new Error('The packaged app is missing the launch ad flow.');
 if (!app.includes('openReportAd')) throw new Error('The packaged app is missing the report unlock flow.');
 if (!app.includes('vendor/firebase.js')) throw new Error('The current app shell is missing its compatibility bridge script.');
+for (const retiredCopy of ['Interactive prototype', 'This local demo', 'in this demo', 'This simulation', 'Finish Firebase setup', 'stored securely in Firebase']) {
+  if (app.includes(retiredCopy)) throw new Error(`Store-facing app copy still contains: ${retiredCopy}`);
+}
+if (!app.includes('The queue service is unavailable. Please try again shortly.')) throw new Error('The packaged app can still silently simulate queue operations when the API is unavailable.');
 
 const bridgeSource = readFileSync(resolve(root, 'scripts/firebase-browser-entry.js'), 'utf8');
 if (!bridgeSource.includes("from './neon-api-client.js'")) throw new Error('The current app compatibility bridge is not backed by the Neon API.');
@@ -100,6 +104,9 @@ for (const key of ['NSPrivacyTracking', 'NSPrivacyCollectedDataTypeUserID', 'NSP
 }
 const xcodeProject = readFileSync(resolve(root, 'ios/App/App.xcodeproj/project.pbxproj'), 'utf8');
 if (!xcodeProject.includes('PrivacyInfo.xcprivacy in Resources')) throw new Error('The iOS privacy manifest is not bundled in the app target.');
+if (!xcodeProject.includes('PRODUCT_BUNDLE_IDENTIFIER = com.letsq.app;')) throw new Error('The iOS bundle ID does not match the existing App Store Connect record.');
+const iosInfo = readFileSync(resolve(root, 'ios/App/App/Info.plist'), 'utf8');
+if (!iosInfo.includes('ITSAppUsesNonExemptEncryption')) throw new Error('The iOS export-compliance declaration is missing.');
 
 const privacy = readFileSync(resolve(root, 'www/privacy.html'), 'utf8');
 if (!privacy.includes('letsqsupportteam@gmail.com')) throw new Error('The published privacy policy is missing the support contact.');
