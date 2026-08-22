@@ -55,6 +55,8 @@ const bridgeSource = readFileSync(resolve(root, 'scripts/firebase-browser-entry.
 if (!bridgeSource.includes("from './neon-api-client.js'")) throw new Error('The current app compatibility bridge is not backed by the Neon API.');
 if (/from ['"](?:firebase\/|@supabase\/)/.test(bridgeSource)) throw new Error('A retired queue SDK was reintroduced into the production bridge.');
 if (!bridgeSource.includes("get backend() { return 'neon'; }")) throw new Error('The compatibility bridge does not declare Neon as its queue backend.');
+if (!bridgeSource.includes('restoreHostQueue')) throw new Error('The compatibility bridge cannot restore a saved Host queue after relaunch.');
+if (!bridgeSource.includes('restoreSavedHostIntoUi')) throw new Error('The app shell cannot resume a saved Host queue after relaunch.');
 
 const reportSource = readFileSync(resolve(root, 'scripts/report-browser-entry.js'), 'utf8');
 if (!reportSource.includes("apiRequest('get-report'")) throw new Error('Q Report is not reading Neon-backed ticket aggregates.');
