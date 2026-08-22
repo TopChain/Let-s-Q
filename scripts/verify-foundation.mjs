@@ -102,6 +102,7 @@ const iosPrivacy = readFileSync(resolve(root, 'ios/App/App/PrivacyInfo.xcprivacy
 for (const key of ['NSPrivacyTracking', 'NSPrivacyCollectedDataTypeUserID', 'NSPrivacyCollectedDataTypeOtherUserContent', 'NSPrivacyCollectedDataTypeProductInteraction']) {
   if (!iosPrivacy.includes(key)) throw new Error(`The iOS privacy manifest is missing ${key}.`);
 }
+if (/<key>NSPrivacyCollectedDataTypeLinked<\/key>\s*<true\/>/.test(iosPrivacy)) throw new Error('Anonymous queue data is incorrectly declared as linked to a real-world identity.');
 const xcodeProject = readFileSync(resolve(root, 'ios/App/App.xcodeproj/project.pbxproj'), 'utf8');
 if (!xcodeProject.includes('PrivacyInfo.xcprivacy in Resources')) throw new Error('The iOS privacy manifest is not bundled in the app target.');
 if (!xcodeProject.includes('PRODUCT_BUNDLE_IDENTIFIER = com.letsq.app;')) throw new Error('The iOS bundle ID does not match the existing App Store Connect record.');
