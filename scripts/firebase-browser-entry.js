@@ -1,21 +1,23 @@
-import { createClient } from '@supabase/supabase-js';
+import { apiRequest, ensureHostSession, queueApiConfigured } from './neon-api-client.js';
 
 // Compatibility bridge for the current app.html. The legacy global name is
 // preserved so the UI does not need a 2 MB in-place rewrite, but every queue
-// operation below uses Supabase. Firebase is no longer the queue source of truth.
-let api;
+// operation below uses the Let’s Q API backed by Neon Postgres.
 let uid = null;
 let hostQueueId = null;
 let selectedTicketToken = null;
 let hooksInstalled = false;
 let ticketPollTimer = null;
 
-const HOST_QUEUE_KEY = 'letsq.supabase.hostQueueId';
-const TICKETS_KEY = 'letsq.supabase.tickets.v1';
-const SELECTED_TICKET_KEY = 'letsq.supabase.selectedTicket.v1';
+const HOST_QUEUE_KEY = 'letsq.neon.hostQueueId';
+const LEGACY_HOST_QUEUE_KEY = 'letsq.supabase.hostQueueId';
+const TICKETS_KEY = 'letsq.neon.tickets.v1';
+const LEGACY_TICKETS_KEY = 'letsq.supabase.tickets.v1';
+const SELECTED_TICKET_KEY = 'letsq.neon.selectedTicket.v1';
+const LEGACY_SELECTED_TICKET_KEY = 'letsq.supabase.selectedTicket.v1';
 
 function configured(config) {
-  return Boolean(config?.supabaseUrl && config?.supabaseAnonKey);
+  return Boolean(config?.apiBaseUrl || config?.publicAppUrl) && queueApiConfigured();
 }
 
 function readJson(key, fallback) {
@@ -84,7 +86,8 @@ function mapQueue(row) {
 }
 
 function savedTickets() {
-  const value = readJson(TICKETS_KEY, []);
+  const current = readJson(TICKETS_KEY, null);
+  const value = Array.isArray(current) ? current : readJson(LEGACY_TICKETS_KEY, []);
   return Array.isArray(value) ? value : [];
 }
 
@@ -103,51 +106,35 @@ function saveTicket(ticket) {
 }
 
 function selectedTicket() {
-  const token = selectedTicketToken || readJson(SELECTED_TICKET_KEY, null);
+  const token = selectedTicketToken || readJson(SELECTED_TICKET_KEY, null) || readJson(LEGACY_SELECTED_TICKET_KEY, null);
   const tickets = savedTickets();
   return tickets.find(item => item.accessToken === token) || tickets[0] || null;
 }
 
 async function ensureHost() {
-  if (!api) throw new Error('The queue service is not connected yet.');
-  let { data: { session } } = await api.auth.getSession();
-  if (!session) {
-    const { data, error } = await api.auth.signInAnonymously();
-    if (error) throw new Error(error.message || 'Could not create this device’s private Host identity.');
-    session = data.session;
-  }
-  uid = session?.user?.id || null;
+  const session = await ensureHostSession();
+  uid = session?.hostId || null;
   if (!uid) throw new Error('Could not create this device’s private Host identity.');
-  const { error } = await api.from('host_profiles').upsert({ id: uid }, { onConflict: 'id' });
-  if (error) throw new Error(error.message);
   return uid;
 }
 
 async function init(config) {
   if (!configured(config)) return null;
-  api = createClient(config.supabaseUrl, config.supabaseAnonKey, {
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true,
-      storageKey: `letsq-host-session-${new URL(config.supabaseUrl).hostname.split('.')[0]}`
-    }
-  });
-  hostQueueId = readJson(HOST_QUEUE_KEY, null);
-  selectedTicketToken = readJson(SELECTED_TICKET_KEY, null);
+  hostQueueId = readJson(HOST_QUEUE_KEY, null) || readJson(LEGACY_HOST_QUEUE_KEY, null);
+  selectedTicketToken = readJson(SELECTED_TICKET_KEY, null) || readJson(LEGACY_SELECTED_TICKET_KEY, null);
   setTimeout(() => {
     installHooks();
     syncSavedTicketsIntoUi();
     startTicketPolling();
   }, 0);
-  // A Queuer does not create an Auth account merely by opening the app. Host
-  // identity is created lazily by ensureHost() only when Host actions begin.
-  return { backend: 'supabase' };
+  // A Queuer does not create an account merely by opening the app. A random,
+  // private Host device token is created lazily only when Host actions begin.
+  return { backend: 'neon' };
 }
 
 async function createQueue(queue) {
-  const ownerId = await ensureHost();
+  await ensureHost();
   const values = {
-    owner_id: ownerId,
     booth_name: String(queue.store || queue.event || 'Host').trim().slice(0, 60),
     event_name: String(queue.event || queue.store || 'Let’s Q').trim().slice(0, 80),
     queue_name: String(queue.queue || 'Queue').trim().slice(0, 40),
@@ -159,8 +146,7 @@ async function createQueue(queue) {
     status: 'open',
     accepting_entries: true
   };
-  const { data, error } = await api.from('queues').insert(values).select().single();
-  if (error) throw new Error(error.message);
+  const data = await apiRequest('create-queue', values, { host: true });
   hostQueueId = data.id;
   writeJson(HOST_QUEUE_KEY, hostQueueId);
   return mapQueue(data);
@@ -172,20 +158,7 @@ async function updateQueue(queueId, changes = {}) {
   if (!id) throw new Error('No Host queue is selected.');
 
   if (Number.isFinite(Number(changes.nowServing)) && Number(changes.nowServing) > 0) {
-    const number = Number(changes.nowServing);
-    const { data: ticket, error: findError } = await api.from('tickets')
-      .select('id,status')
-      .eq('queue_id', id)
-      .eq('ticket_number', number)
-      .in('status', ['waiting', 'hold', 'called', 'ready'])
-      .order('queue_order')
-      .limit(1)
-      .maybeSingle();
-    if (findError) throw new Error(findError.message);
-    if (ticket && ticket.status !== 'called' && ticket.status !== 'ready') {
-      const { error } = await api.from('tickets').update({ status: 'called', called_at: new Date().toISOString(), hold_until: null }).eq('id', ticket.id);
-      if (error) throw new Error(error.message);
-    }
+    await apiRequest('call-ticket', { queueId: id, ticketNumber: Number(changes.nowServing) }, { host: true });
   }
 
   const mapped = {};
@@ -197,9 +170,7 @@ async function updateQueue(queueId, changes = {}) {
   if ('status' in changes) mapped.status = changes.status;
   if ('acceptingEntries' in changes) mapped.accepting_entries = Boolean(changes.acceptingEntries);
   if (Object.keys(mapped).length) {
-    mapped.updated_at = new Date().toISOString();
-    const { error } = await api.from('queues').update(mapped).eq('id', id);
-    if (error) throw new Error(error.message);
+    await apiRequest('update-queue', { queueId: id, changes: mapped }, { host: true });
   }
 }
 
@@ -219,38 +190,28 @@ async function updateTicket(queueId, ticketId, changes = {}) {
     mapped.private_note = null;
     mapped.hold_until = null;
   }
-  const { error } = await api.from('tickets').update(mapped).eq('queue_id', queueId).eq('id', ticketId);
-  if (error) throw new Error(error.message);
+  await apiRequest('update-ticket', { queueId, ticketId, changes: mapped }, { host: true });
 }
 
 async function findQueueByCode(code) {
-  if (!api) return null;
   const cleaned = String(code || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
-  const { data, error } = await api.rpc('get_public_queue_by_code', { p_join_code: cleaned });
-  if (error) throw new Error(error.message);
-  const row = Array.isArray(data) ? data[0] : data;
+  const row = await apiRequest('find-queue', { joinCode: cleaned });
   if (!row || row.status !== 'open') return null;
   return mapQueue(row);
 }
 
 async function joinQueue(queueId, ticket = {}) {
-  if (!api) throw new Error('The queue service is not connected yet.');
   const secretCode = normalizeSecret(ticket.secretCode);
   const note = String(ticket.note || '').trim();
   if (note.length > 60) throw new Error('The optional request must be 60 characters or fewer.');
-  const { data, error } = await api.rpc('join_queue', {
-    p_public_queue_id: queueId,
-    p_secret_code: secretCode,
-    p_private_note: note || null
-  });
-  if (error) throw new Error(error.message);
-  const created = Array.isArray(data) ? data[0] : data;
-  if (!created) throw new Error('Could not create your ticket.');
   const state = stateRef();
+  const publicQueueId = state?.activeQueue?.publicId || queueId;
+  const created = await apiRequest('join-queue', { publicQueueId, secretCode, privateNote: note || null });
+  if (!created) throw new Error('Could not create your ticket.');
   const active = state?.activeQueue || {};
   const record = {
     accessToken: created.access_token,
-    publicId: queueId,
+    publicId: publicQueueId,
     code: active.code || '',
     secretCode,
     ticketNumber: created.ticket_number,
@@ -275,18 +236,14 @@ function watchHostQueue(queueId, callback) {
   let stopped = false;
   let busy = false;
   const refresh = async () => {
-    if (stopped || busy || !api) return;
+    if (stopped || busy) return;
     busy = true;
     try {
       await ensureHost();
-      const { data: queue, error: queueError } = await api.from('queues')
-        .select('id,public_id,join_code,booth_name,event_name,queue_name,starts_at,ends_at,status,accepting_entries,next_queue_order')
-        .eq('id', queueId).maybeSingle();
-      if (queueError || !queue) return;
-      const { data: tickets, error: ticketError } = await api.from('tickets')
-        .select('id,ticket_number,queue_order,status,no_show_attempts,private_note,called_at,hold_until')
-        .eq('queue_id', queueId).order('queue_order');
-      if (ticketError) return;
+      const snapshot = await apiRequest('host-snapshot', { queueId }, { host: true });
+      const queue = snapshot?.queue;
+      const tickets = snapshot?.tickets;
+      if (!queue) return;
       const rows = tickets || [];
       const called = rows.find(item => item.status === 'called' || item.status === 'ready');
       const compatQueue = {
@@ -299,7 +256,7 @@ function watchHostQueue(queueId, callback) {
         ticketNumber: item.ticket_number,
         status: ['waiting', 'called', 'ready', 'hold'].includes(item.status) ? 'waiting' : item.status,
         remoteStatus: item.status,
-        secretCode: 'PRIVATE',
+        secretCode: 'Anonymous guest',
         note: item.private_note || '',
         noShowAttempts: Number(item.no_show_attempts || 0),
         queueOrder: Number(item.queue_order)
@@ -318,15 +275,16 @@ function watchHostQueue(queueId, callback) {
 
 async function refreshSelectedTicket(notify = false) {
   const ticket = selectedTicket();
-  if (!ticket?.accessToken || !api) return null;
+  if (!ticket?.accessToken) return null;
   selectedTicketToken = ticket.accessToken;
   writeJson(SELECTED_TICKET_KEY, selectedTicketToken);
-  const { data, error } = await api.rpc('get_my_ticket', { p_access_token: ticket.accessToken });
-  if (error) {
+  let current;
+  try {
+    current = await apiRequest('get-ticket', { accessToken: ticket.accessToken });
+  } catch (error) {
     if (notify) toast(error.message || 'Could not refresh your ticket.');
     return null;
   }
-  const current = Array.isArray(data) ? data[0] : data;
   if (!current) return null;
   const updated = {
     ...ticket,
@@ -417,29 +375,14 @@ async function moveHostTicketToBack(ticket, countNoShow) {
   const queueId = state?.activeQueue?.internalId || state?.activeQueue?.id || hostQueueId;
   if (!queueId || !ticket?.id) return;
   await ensureHost();
-  const { data: queue, error: queueError } = await api.from('queues').select('next_queue_order').eq('id', queueId).single();
-  if (queueError) throw new Error(queueError.message);
-  const attempts = Number(ticket.noShowAttempts || 0) + (countNoShow ? 1 : 0);
-  if (countNoShow && attempts >= 3) {
-    const { error } = await api.from('tickets').update({ status: 'cancelled', no_show_attempts: attempts, private_note: null, hold_until: null, closed_at: new Date().toISOString() }).eq('id', ticket.id);
-    if (error) throw new Error(error.message);
-    return;
-  }
-  const order = Number(queue.next_queue_order || 1);
-  const { error } = await api.from('tickets').update({ status: 'waiting', queue_order: order, no_show_attempts: attempts, called_at: null, hold_until: null }).eq('id', ticket.id);
-  if (error) throw new Error(error.message);
-  const { error: bumpError } = await api.from('queues').update({ next_queue_order: order + 1, updated_at: new Date().toISOString() }).eq('id', queueId);
-  if (bumpError) throw new Error(bumpError.message);
+  await apiRequest('move-ticket', { queueId, ticketId: ticket.id, countNoShow }, { host: true });
 }
 
 async function createWalkIn() {
   const state = stateRef();
   const publicId = state?.activeQueue?.publicId;
   if (!publicId) throw new Error('Start a Host queue first.');
-  const code = `W${Math.random().toString(36).slice(2, 7).toUpperCase().replace(/[^A-Z0-9]/g, 'X')}`;
-  const { data, error } = await api.rpc('join_queue', { p_public_queue_id: publicId, p_secret_code: code, p_private_note: 'Walk-in ticket' });
-  if (error) throw new Error(error.message);
-  return Array.isArray(data) ? data[0] : data;
+  return apiRequest('create-walk-in', { publicQueueId: publicId }, { host: true });
 }
 
 async function closeHostQueue() {
@@ -447,14 +390,7 @@ async function closeHostQueue() {
   const queueId = state?.activeQueue?.internalId || state?.activeQueue?.id || hostQueueId;
   if (!queueId) throw new Error('No Host queue is selected.');
   await ensureHost();
-  const now = new Date().toISOString();
-  const { error: ticketError } = await api.from('tickets')
-    .update({ status: 'cancelled', private_note: null, hold_until: null, closed_at: now })
-    .eq('queue_id', queueId)
-    .in('status', ['waiting', 'called', 'ready', 'hold']);
-  if (ticketError) throw new Error(ticketError.message);
-  const { error } = await api.from('queues').update({ status: 'closed', accepting_entries: false, updated_at: now }).eq('id', queueId);
-  if (error) throw new Error(error.message);
+  await apiRequest('close-queue', { queueId }, { host: true });
 }
 
 function installHooks() {
@@ -480,8 +416,8 @@ function installHooks() {
   window.cancelTicket = async () => {
     const ticket = selectedTicket();
     if (!ticket?.accessToken) { toast('No live ticket is selected.'); return; }
-    const { error } = await api.rpc('cancel_my_ticket', { p_access_token: ticket.accessToken });
-    if (error) { toast(error.message || 'Could not cancel this ticket.'); return; }
+    try { await apiRequest('cancel-ticket', { accessToken: ticket.accessToken }); }
+    catch (error) { toast(error.message || 'Could not cancel this ticket.'); return; }
     saveTicket({ ...ticket, status: 'cancelled', updatedAt: Date.now() });
     try { window.closeModal?.(); window.switchTab?.('list'); } catch {}
     syncSavedTicketsIntoUi();
@@ -544,13 +480,14 @@ function installHooks() {
             if (scores.length < 3 || scores.some(score => score < 1)) { toast('Choose all three survey scores.'); return; }
             const ticket = selectedTicket();
             if (!ticket?.accessToken) { toast('No ticket is selected.'); return; }
-            const { error } = await api.rpc('submit_anonymous_rating', {
-              p_access_token: ticket.accessToken,
-              p_wait_score: scores[0],
-              p_service_score: scores[1],
-              p_return_score: scores[2]
-            });
-            if (error) { toast(error.message || 'The survey can be submitted after service is completed.'); return; }
+            try {
+              await apiRequest('submit-rating', {
+                accessToken: ticket.accessToken,
+                waitScore: scores[0],
+                serviceScore: scores[1],
+                returnScore: scores[2]
+              });
+            } catch (error) { toast(error.message || 'The survey can be submitted after service is completed.'); return; }
             window.closeModal?.();
             toast('Anonymous survey submitted.');
           };
@@ -581,5 +518,5 @@ window.LetsQFirebase = {
   joinQueue,
   watchHostQueue,
   get uid() { return uid; },
-  get backend() { return 'supabase'; }
+  get backend() { return 'neon'; }
 };

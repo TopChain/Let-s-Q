@@ -16,7 +16,6 @@ const publicFiles = [
   'robots.txt',
   'i18n-extra.js',
   'app-shell.js',
-  'live-queue.js',
   '_redirects',
   "Let's Q Web logo.jpeg",
   "Let's Q app logo.jpeg",
@@ -28,10 +27,6 @@ const vendorFiles = [
   {
     source: resolve(root, 'vendor/firebase.js'),
     destination: 'vendor/firebase.js'
-  },
-  {
-    source: resolve(root, 'vendor/supabase.js'),
-    destination: 'vendor/supabase.js'
   },
   {
     source: resolve(root, 'vendor/qrcode.js'),

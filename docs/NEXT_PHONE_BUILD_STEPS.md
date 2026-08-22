@@ -6,7 +6,7 @@
 - iPhone/iPad project: `ios/`
 - Shared web app used by both: `www/` (built from the root web files)
 - App name: Let’s Q
-- Provisional package ID: `app.letsq.queue` — confirm availability before any public store upload.
+- Store package/bundle ID: `app.letsq.queue`.
 
 ## One action needed on this Mac now
 
@@ -24,4 +24,4 @@ Android needs Android Studio (which includes the Java and Android SDK tools). In
 
 ## Before real queues can work across phones
 
-Create a Supabase account and a new project. Do not put any private payment or server keys in the app. Codex will then guide you through applying `supabase/schema.sql` and connecting only the public project URL and anonymous key.
+Apply `neon/schema.sql`, `neon/legacy-schema.sql`, and the private legacy export to the existing Let’s Q Neon project, then configure `DATABASE_URL` and `RATE_LIMIT_SECRET` only in Netlify Functions. Do not put database or payment secrets in the app.

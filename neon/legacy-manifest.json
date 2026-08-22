@@ -1,0 +1,11 @@
+{
+  "sourceProject": "Supabase Let’s Q project",
+  "sourceSchema": "letsq_legacy",
+  "exportedAt": "2026-08-22",
+  "queues": 5,
+  "tickets": 6,
+  "productionRows": 0,
+  "authUsers": 0,
+  "storageObjects": 0,
+  "note": "Row values are intentionally excluded from source control and applied from a private one-time export."
+}

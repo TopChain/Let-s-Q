@@ -1,27 +1,7 @@
-import { createClient } from '@supabase/supabase-js';
+import { apiRequest, ensureHostSession } from './neon-api-client.js';
 
-let reportClient = null;
 let latestReport = null;
 let loadingReport = false;
-
-function config() {
-  return window.LetsQFirebaseConfig || window.LETS_Q_CONFIG || {};
-}
-
-function client() {
-  if (reportClient) return reportClient;
-  const settings = config();
-  if (!settings.supabaseUrl || !settings.supabaseAnonKey) throw new Error('The report service is not configured.');
-  const projectRef = new URL(settings.supabaseUrl).hostname.split('.')[0];
-  reportClient = createClient(settings.supabaseUrl, settings.supabaseAnonKey, {
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true,
-      storageKey: `letsq-host-session-${projectRef}`
-    }
-  });
-  return reportClient;
-}
 
 function readJson(key, fallback = null) {
   try { return JSON.parse(localStorage.getItem(key) || '') ?? fallback; } catch { return fallback; }
@@ -69,33 +49,14 @@ function buildArrivalBuckets(tickets) {
 }
 
 async function fetchReport() {
-  const api = client();
-  const { data: { session }, error: sessionError } = await api.auth.getSession();
-  if (sessionError || !session?.user?.id) throw new Error('Start or reopen a Host queue on this device before viewing its report.');
-  const queueId = readJson('letsq.supabase.hostQueueId');
+  await ensureHostSession();
+  const queueId = readJson('letsq.neon.hostQueueId') || readJson('letsq.supabase.hostQueueId');
   if (!queueId) throw new Error('No Host queue is saved on this device yet.');
-
-  const [queueResult, ticketResult, ratingResult] = await Promise.all([
-    api.from('queues')
-      .select('id,event_name,booth_name,queue_name,starts_at,ends_at,status,created_at')
-      .eq('id', queueId).maybeSingle(),
-    api.from('tickets')
-      .select('status,created_at,called_at,served_at,closed_at,no_show_attempts')
-      .eq('queue_id', queueId)
-      .order('created_at'),
-    api.from('ratings')
-      .select('wait_score,service_score,return_score,created_at')
-      .eq('queue_id', queueId)
-      .order('created_at')
-  ]);
-
-  if (queueResult.error || !queueResult.data) throw new Error(queueResult.error?.message || 'This Host queue is no longer available.');
-  if (ticketResult.error) throw new Error(ticketResult.error.message);
-  if (ratingResult.error) throw new Error(ratingResult.error.message);
-
-  const queue = queueResult.data;
-  const tickets = ticketResult.data || [];
-  const ratings = ratingResult.data || [];
+  const report = await apiRequest('get-report', { queueId }, { host: true });
+  if (!report?.queue) throw new Error('This Host queue is no longer available.');
+  const queue = report.queue;
+  const tickets = report.tickets || [];
+  const ratings = report.ratings || [];
   const served = tickets.filter(ticket => ticket.status === 'served').length;
   const cancelled = tickets.filter(ticket => ticket.status === 'cancelled').length;
   const active = tickets.filter(ticket => ['waiting', 'called', 'ready', 'hold'].includes(ticket.status)).length;
@@ -215,9 +176,10 @@ function createPdf(lines) {
     pdf += `${index + 1} 0 obj\n${body}\nendobj\n`;
   });
   const xrefOffset = pdf.length;
-  pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+  const xrefSpace = String.fromCharCode(32);
+  pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f${xrefSpace}\n`;
   for (let index = 1; index <= objects.length; index += 1) {
-    pdf += `${String(offsets[index]).padStart(10, '0')} 00000 n \n`;
+    pdf += `${String(offsets[index]).padStart(10, '0')} 00000 n${xrefSpace}\n`;
   }
   pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`;
   return new Blob([pdf], { type: 'application/pdf' });

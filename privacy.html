@@ -15,7 +15,7 @@
 <body>
   <main>
     <h1>Let’s Q Privacy Policy</h1>
-    <p class="meta">Last updated: August 11, 2026</p>
+    <p class="meta">Last updated: August 22, 2026</p>
     <div class="callout"><strong>Our promise:</strong> Queuers can join without providing a name, phone number, email address, or social-media account.</div>
 
     <h2>What Let’s Q does</h2>
@@ -37,7 +37,7 @@
     <p>Camera access is used only when a person chooses to scan a queue QR code. A Host may choose a booth photo for the printed queue sheet; the current app keeps that selection on the device and does not upload it to our queue service.</p>
 
     <h2>How information is used and shared</h2>
-    <p>We use queue information to run the queue, show ticket status, manage no-shows, and produce combined Host analytics. The queue service is operated using Supabase, which processes data on our behalf to provide the backend. A Queuer’s optional request is shared with the relevant Host because that is necessary to provide the queue service. We do not sell personal information or send queue secret codes or private queue requests to advertisers.</p>
+    <p>We use queue information to run the queue, show ticket status, manage no-shows, and produce combined Host analytics. Netlify processes encrypted API requests and Neon stores the queue database on our behalf. A Queuer’s optional request is shared with the relevant Host because that is necessary to provide the queue service. We do not sell personal information or send queue secret codes or private queue requests to advertisers.</p>
 
     <h2>Advertising and purchases</h2>
     <p>The Android app uses Google AdMob. Depending on availability, consent choices, and the screen or action involved, it may display a banner ad, one app-open ad near the beginning of an app session, an interstitial ad after a Queuer voluntarily submits an experience rating, or an optional rewarded ad that a Host chooses to watch to unlock a report. Advertising is not required to scan a queue, join a queue, keep a ticket, check ticket status, cancel a ticket, or operate a Host queue.</p>
@@ -45,7 +45,7 @@
     <p>The Android app also offers an optional paid ad-free subscription. Store purchase and entitlement information is processed by Google Play and may be used by Let’s Q only to determine whether the purchased feature is active.</p>
 
     <h2>Retention and security</h2>
-    <p>We retain queue records and anonymous ratings only for as long as reasonably necessary to operate and improve the service, meet legal obligations, and resolve disputes. Data is sent to the backend over encrypted connections. No security method is perfect, but we use reasonable safeguards to protect the information we process.</p>
+    <p>Optional queue requests are erased when a ticket is served or cancelled. Closed ticket records, closed queues, and anonymous ratings are normally deleted within 30 days. A random Host device session may remain for up to 400 days after its last use so the Host can securely reopen its queue. Short-lived abuse-prevention records contain only one-way keyed hashes, not raw IP addresses, and expire automatically. Data is sent over encrypted connections.</p>
 
     <h2>Your choices and contact</h2>
     <p>You can choose not to provide an optional queue request or experience rating. For privacy questions, deletion requests, or this policy, contact us at <a href="mailto:letsqsupportteam@gmail.com">letsqsupportteam@gmail.com</a>.</p>

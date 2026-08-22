@@ -30,3 +30,27 @@ jobs:
       - name: Compile Android debug app
         working-directory: android
         run: ./gradlew assembleDebug --no-daemon
+
+  ios-verify:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run web:build
+      - run: pnpm exec cap sync ios
+      - name: Compile unsigned iOS simulator app
+        run: >-
+          xcodebuild
+          -project ios/App/App.xcodeproj
+          -scheme App
+          -configuration Debug
+          -destination 'generic/platform=iOS Simulator'
+          CODE_SIGNING_ALLOWED=NO
+          build

@@ -7,7 +7,7 @@ tasks.register('syncLetsQWebAssets', Copy) {
     from(letsQRoot) {
         include 'index.html', 'app.html', 'privacy.html', 'delete-data.html',
                 'runtime-config.js', 'app-ads.txt', 'i18n-extra.js', 'app-shell.js',
-                'live-queue.js', '_redirects', "Let's Q Web logo.jpeg",
+                '_redirects', "Let's Q Web logo.jpeg",
                 "Let's Q app logo.jpeg", 'queue-join-demo.svg',
                 'staff-pair-demo.svg', 'ticket-share-demo.svg'
     }
@@ -24,8 +24,8 @@ android {
         applicationId "app.letsq.queue"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 8
-        versionName "1.3.4"
+        versionCode 9
+        versionName "1.3.5"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.

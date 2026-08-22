@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "web:build": "node scripts/prepare-web.mjs",
-    "check": "node scripts/verify-foundation.mjs",
+    "check": "node scripts/verify-foundation.mjs && node --test tests/*.test.mjs",
     "cap:sync": "pnpm run web:build && cap sync",
     "android:open": "pnpm run cap:sync && cap open android",
     "ios:open": "pnpm run cap:sync && cap open ios"
@@ -15,8 +15,7 @@
     "@capacitor/camera": "^8.0.0",
     "@capacitor/core": "^8.0.0",
     "@capacitor/preferences": "^8.0.0",
-    "@supabase/supabase-js": "^2.0.0",
-    "firebase": "^12.16.0",
+    "@neondatabase/serverless": "1.1.0",
     "jsqr": "1.4.0",
     "qrcode": "1.5.4"
   },

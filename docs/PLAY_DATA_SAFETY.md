@@ -45,7 +45,7 @@ Google lists advertising/marketing, analytics, and fraud prevention/security/com
 The app also transmits data off-device to operate queues:
 
 - **Other user-generated content — App functionality:** Host event/booth/queue names, a Queuer’s required private secret code (stored only as a protected hash server-side), and the optional short service request.
-- **User IDs — App functionality / account management:** a random anonymous Supabase Host account identifier is created only when a device uses Host features. Queuers do not create an Auth account merely by opening or joining a queue.
+- **User IDs — App functionality / account management:** a random Neon-backed Host device identifier and private bearer token are created only when a device uses Host features. Queuers do not create an account merely by opening or joining a queue.
 - **App interactions / Other actions — App functionality and analytics:** queue joins, ticket state transitions, no-show handling, and optional anonymous ratings are processed to run the service and produce aggregate Host reports.
 
 Queue data is transmitted over encrypted connections. The public privacy policy should stay aligned with the Play form.
