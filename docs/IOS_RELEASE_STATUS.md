@@ -2,7 +2,7 @@
 
 ## Core queue
 
-The iOS bundle ID is `app.letsq.queue`. Version 1.3.5 (build 2) uses the Neon-backed Let’s Q API after the production cutover gate is completed.
+The iOS bundle ID is `com.letsq.app`, matching the existing App Store Connect record. Version 1.3.5 (build 2) uses the Neon-backed Let’s Q API after the production cutover gate is completed.
 
 ## Q Report monetization
 
