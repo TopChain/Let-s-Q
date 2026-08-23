@@ -53,6 +53,12 @@ function ensureWebAdShell() {
   }
 }
 
+function resumeInterruptedStartup() {
+  window.renderQueueList?.();
+  window.renderHostQueue?.();
+  window.openLinkedQueue?.();
+}
+
 function hardenIosReportMonetization() {
   if (!isNativeIos()) return;
   const paywall = document.getElementById('reportPaywall');
@@ -160,6 +166,7 @@ function hardenCancelModal() {
 
 window.addEventListener('load', () => {
   ensureWebAdShell();
+  resumeInterruptedStartup();
   hideUnimplementedControls();
   hideUnsupportedTicketSharing();
   hardenIosReportMonetization();
