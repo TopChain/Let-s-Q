@@ -27,6 +27,32 @@ function isNativeIos() {
   }
 }
 
+function ensureWebAdShell() {
+  if (window.Capacitor?.isNativePlatform?.()) return;
+  const shell = document.querySelector('.app-shell, .phone');
+  const nav = document.querySelector('.bottom-nav');
+  if (!shell) return;
+
+  if (!document.getElementById('stickyAdBanner')) {
+    const banner = document.createElement('aside');
+    banner.id = 'stickyAdBanner';
+    banner.className = 'ad-banner';
+    banner.setAttribute('aria-label', 'Sponsored content');
+    banner.innerHTML = '<span class="ad-badge">AD</span><div class="ad-copy"><b>Make your next wait feel shorter</b><span>Sponsored · Let’s Q never gives advertisers your queue code or private request.</span></div><button class="ad-close" onclick="showToast(\'Privacy choices are available from the app menu.\')">ⓘ</button>';
+    if (nav?.parentElement) nav.parentElement.insertBefore(banner, nav);
+    else shell.appendChild(banner);
+  }
+
+  if (!document.getElementById('fullAd')) {
+    const overlay = document.createElement('section');
+    overlay.id = 'fullAd';
+    overlay.className = 'full-ad';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    shell.appendChild(overlay);
+  }
+}
+
 function hardenIosReportMonetization() {
   if (!isNativeIos()) return;
   const paywall = document.getElementById('reportPaywall');
@@ -133,6 +159,7 @@ function hardenCancelModal() {
 }
 
 window.addEventListener('load', () => {
+  ensureWebAdShell();
   hideUnimplementedControls();
   hideUnsupportedTicketSharing();
   hardenIosReportMonetization();
