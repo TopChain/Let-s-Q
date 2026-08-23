@@ -11,6 +11,14 @@ function hideUnimplementedControls() {
   }
 }
 
+function hideUnsupportedTicketSharing() {
+  document.querySelectorAll('#screen-queuer .ticket-actions button').forEach(button => {
+    if (button.textContent.trim() !== 'Share ticket') return;
+    button.hidden = true;
+    button.setAttribute('aria-hidden', 'true');
+  });
+}
+
 function isNativeIos() {
   try {
     return Boolean(window.Capacitor?.isNativePlatform?.()) && window.Capacitor?.getPlatform?.() === 'ios';
@@ -117,8 +125,16 @@ function clarifyCloseQueueModal() {
   if (button) button.textContent = 'Close queue';
 }
 
+function hardenCancelModal() {
+  const ticketNumber = document.getElementById('ticketNumber')?.textContent?.trim();
+  const subtitle = document.querySelector('#modalContent .subtitle');
+  if (!ticketNumber || !subtitle) return;
+  subtitle.textContent = `Ticket ${ticketNumber} will be cancelled and its number will never be reassigned.`;
+}
+
 window.addEventListener('load', () => {
   hideUnimplementedControls();
+  hideUnsupportedTicketSharing();
   hardenIosReportMonetization();
   removePrototypeMetrics();
   initializeHostSchedule();
@@ -127,11 +143,12 @@ window.addEventListener('load', () => {
   const previousOpenModal = window.openModal;
   if (typeof previousOpenModal === 'function') {
     window.openModal = function hardenedOpenModal(type) {
-      if (type === 'staff' || type === 'settings') {
+      if (type === 'staff' || type === 'settings' || type === 'share') {
         window.showToast?.('This control is not enabled in the production release yet.');
         return;
       }
       previousOpenModal(type);
+      if (type === 'cancel') hardenCancelModal();
       if (type === 'privacy') replacePrivacyModal();
       if (type === 'walkin') replaceWalkInModal();
       if (type === 'closeQueue') clarifyCloseQueueModal();
@@ -142,6 +159,7 @@ window.addEventListener('load', () => {
   // truthfulness guards applied after every render.
   const observer = new MutationObserver(() => {
     hideUnimplementedControls();
+    hideUnsupportedTicketSharing();
     hardenIosReportMonetization();
   });
   observer.observe(document.body, { childList: true, subtree: true });
