@@ -29,8 +29,8 @@ function isNativeIos() {
 
 function ensureWebAdShell() {
   if (window.Capacitor?.isNativePlatform?.()) return;
-  const shell = document.querySelector('.app-shell, .phone');
   const nav = document.querySelector('.bottom-nav');
+  const shell = document.querySelector('.app-shell, .phone') || nav?.parentElement || document.querySelector('.desktop-wrap');
   if (!shell) return;
 
   if (!document.getElementById('stickyAdBanner')) {
