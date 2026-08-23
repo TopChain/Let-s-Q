@@ -1,21 +1,23 @@
+function hideControl(button) {
+  button.hidden = true;
+  button.setAttribute('aria-hidden', 'true');
+  button.style.setProperty('display', 'none', 'important');
+}
+
 function hideUnimplementedControls() {
   const selectors = [
     'button[onclick*="openModal(\'staff\')"]',
     'button[onclick*="openModal(\'settings\')"]'
   ];
   for (const selector of selectors) {
-    document.querySelectorAll(selector).forEach(button => {
-      button.hidden = true;
-      button.setAttribute('aria-hidden', 'true');
-    });
+    document.querySelectorAll(selector).forEach(hideControl);
   }
 }
 
 function hideUnsupportedTicketSharing() {
   document.querySelectorAll('#screen-queuer .ticket-actions button').forEach(button => {
     if (button.textContent.trim() !== 'Share ticket') return;
-    button.hidden = true;
-    button.setAttribute('aria-hidden', 'true');
+    hideControl(button);
   });
 }
 
@@ -64,7 +66,7 @@ function hardenIosReportMonetization() {
   const paywall = document.getElementById('reportPaywall');
   if (!paywall) return;
 
-  for (const button of paywall.querySelectorAll('button:not([data-ios-report-button])')) button.hidden = true;
+  for (const button of paywall.querySelectorAll('button:not([data-ios-report-button])')) hideControl(button);
 
   if (!paywall.querySelector('[data-ios-report-note]')) {
     const note = document.createElement('div');
