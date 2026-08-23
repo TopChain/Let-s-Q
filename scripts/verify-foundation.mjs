@@ -71,6 +71,7 @@ if (!hardeningSource.includes('Q Report is included on iPhone in this build.')) 
 if (!hardeningSource.includes("button:not([data-ios-report-button])")) throw new Error('The iOS build does not hide every unsupported report purchase/ad control.');
 if (!hardeningSource.includes('removePrototypeMetrics')) throw new Error('Prototype metrics can still appear as production data.');
 if (!hardeningSource.includes('ensureWebAdShell')) throw new Error('The web report reward cannot recover if the original ad shell is missing.');
+if (!hardeningSource.includes('resumeInterruptedStartup')) throw new Error('A failed ad-shell mount can still prevent QR deep links from opening.');
 if (!hardeningSource.includes('hideUnsupportedTicketSharing')) throw new Error('The release can still expose the prototype ticket-sharing flow.');
 if (!hardeningSource.includes('hardenCancelModal')) throw new Error('The cancel confirmation can still display a fake ticket number.');
 if (!hardeningSource.includes("type === 'staff' || type === 'settings' || type === 'share'")) throw new Error('The prototype share modal is not blocked.');
