@@ -44,13 +44,20 @@ jobs:
         run: |
           test -n "$KEYSTORE_BASE64"
           printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/letsq-upload.jks"
+      - name: Read upload-key alias
+        env:
+          LETSQ_UPLOAD_STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          test -n "$LETSQ_UPLOAD_STORE_PASSWORD"
+          KEY_ALIAS="$(keytool -list -v -keystore "$RUNNER_TEMP/letsq-upload.jks" -storepass "$LETSQ_UPLOAD_STORE_PASSWORD" | sed -n 's/^Alias name: //p' | head -1)"
+          test -n "$KEY_ALIAS"
+          echo "LETSQ_UPLOAD_KEY_ALIAS=$KEY_ALIAS" >> "$GITHUB_ENV"
       - name: Build signed Android App Bundle
         working-directory: android
         env:
           LETSQ_UPLOAD_STORE_FILE: ${{ runner.temp }}/letsq-upload.jks
           LETSQ_UPLOAD_STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          LETSQ_UPLOAD_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          LETSQ_UPLOAD_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          LETSQ_UPLOAD_KEY_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
         run: |
           test -n "$LETSQ_UPLOAD_STORE_PASSWORD"
           test -n "$LETSQ_UPLOAD_KEY_ALIAS"
