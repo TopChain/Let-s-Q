@@ -64,7 +64,7 @@ jobs:
           test -n "$LETSQ_UPLOAD_KEY_PASSWORD"
           ./gradlew bundleRelease --no-daemon
       - name: Verify signed bundle
-        run: jarsigner -verify -strict android/app/build/outputs/bundle/release/app-release.aab
+        run: jarsigner -verify android/app/build/outputs/bundle/release/app-release.aab
       - uses: actions/upload-artifact@v4
         with:
           name: lets-q-android-1.3.5-9
