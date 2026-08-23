@@ -70,6 +70,9 @@ if (!hardeningSource.includes("getPlatform?.() === 'ios'")) throw new Error('Nat
 if (!hardeningSource.includes('Q Report is included on iPhone in this build.')) throw new Error('The iOS build can still imply a fake report charge or ad.');
 if (!hardeningSource.includes("button:not([data-ios-report-button])")) throw new Error('The iOS build does not hide every unsupported report purchase/ad control.');
 if (!hardeningSource.includes('removePrototypeMetrics')) throw new Error('Prototype metrics can still appear as production data.');
+if (!hardeningSource.includes('hideUnsupportedTicketSharing')) throw new Error('The release can still expose the prototype ticket-sharing flow.');
+if (!hardeningSource.includes('hardenCancelModal')) throw new Error('The cancel confirmation can still display a fake ticket number.');
+if (!hardeningSource.includes("type === 'staff' || type === 'settings' || type === 'share'")) throw new Error('The prototype share modal is not blocked.');
 
 if (!bridgeSource.includes("apiRequest('get-ticket'")) throw new Error('Queuer polling is not using the Neon ticket endpoint.');
 if (!bridgeSource.includes("document.visibilityState === 'visible'")) throw new Error('Background queue polling protection is missing.');
