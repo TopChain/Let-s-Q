@@ -149,7 +149,10 @@ jobs:
           plutil -create xml1 "$EXPORT_PLIST"
           /usr/libexec/PlistBuddy -c 'Add :method string app-store-connect' "$EXPORT_PLIST"
           /usr/libexec/PlistBuddy -c "Add :teamID string $APPLE_TEAM_ID" "$EXPORT_PLIST"
-          /usr/libexec/PlistBuddy -c 'Add :signingStyle string automatic' "$EXPORT_PLIST"
+          /usr/libexec/PlistBuddy -c 'Add :signingStyle string manual' "$EXPORT_PLIST"
+          /usr/libexec/PlistBuddy -c 'Add :signingCertificate string Apple Distribution' "$EXPORT_PLIST"
+          /usr/libexec/PlistBuddy -c 'Add :provisioningProfiles dict' "$EXPORT_PLIST"
+          /usr/libexec/PlistBuddy -c 'Add :provisioningProfiles:com.letsq.app string LetsQ App Store 2026' "$EXPORT_PLIST"
           /usr/libexec/PlistBuddy -c 'Add :stripSwiftSymbols bool true' "$EXPORT_PLIST"
           xcodebuild -exportArchive \
             -archivePath "$RUNNER_TEMP/LetsQ.xcarchive" \
