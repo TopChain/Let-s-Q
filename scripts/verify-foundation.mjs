@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 
 const root = resolve(import.meta.dirname, '..');
 const required = [
+  '.github/workflows/release-builds.yml',
   'package.json',
   'capacitor.config.json',
   'index.html',
@@ -116,6 +117,15 @@ if (!xcodeProject.includes('PrivacyInfo.xcprivacy in Resources')) throw new Erro
 if (!xcodeProject.includes('PRODUCT_BUNDLE_IDENTIFIER = com.letsq.app;')) throw new Error('The iOS bundle ID does not match the existing App Store Connect record.');
 const iosInfo = readFileSync(resolve(root, 'ios/App/App/Info.plist'), 'utf8');
 if (!iosInfo.includes('ITSAppUsesNonExemptEncryption')) throw new Error('The iOS export-compliance declaration is missing.');
+
+const androidGradle = readFileSync(resolve(root, 'android/app/build.gradle'), 'utf8');
+for (const marker of ['LETSQ_UPLOAD_STORE_FILE', 'LETSQ_UPLOAD_STORE_PASSWORD', 'LETSQ_UPLOAD_KEY_ALIAS', 'LETSQ_UPLOAD_KEY_PASSWORD']) {
+  if (!androidGradle.includes(marker)) throw new Error(`Android release signing is missing ${marker}.`);
+}
+const releaseWorkflow = readFileSync(resolve(root, '.github/workflows/release-builds.yml'), 'utf8');
+for (const marker of ['bundleRelease', 'app-release.aab', 'xcodebuild archive', 'LetsQ-1.3.5-2.ipa']) {
+  if (!releaseWorkflow.includes(marker)) throw new Error(`The signed store-build workflow is missing ${marker}.`);
+}
 
 const privacy = readFileSync(resolve(root, 'www/privacy.html'), 'utf8');
 if (!privacy.includes('letsqsupportteam@gmail.com')) throw new Error('The published privacy policy is missing the support contact.');
