@@ -1,65 +1,30 @@
 # Let’s Q production backend
 
-## Canonical Supabase project
+## Canonical architecture
 
-The production backend is:
+- Database: the existing **Let’s Q** Neon project
+- API: `netlify/functions/letsq-api.mjs`
+- Browser/mobile endpoint: `/.netlify/functions/letsq-api`
+- Scheduled retention cleanup: `netlify/functions/letsq-cleanup.mjs`
+- Previous Supabase Let’s Q project: migration/rollback source only
 
-- Project name: `Let's Q`
-- Project ref: `exqsdvzgoivacpqqdott`
-- API URL: `https://exqsdvzgoivacpqqdott.supabase.co`
-- Region: `us-west-2`
-- PostgreSQL: 17
+The app no longer exposes a database URL or key. Netlify Functions hold `DATABASE_URL` and `RATE_LIMIT_SECRET`; all queue access is validated server-side. Hosts use random bearer sessions stored only as SHA-256 hashes, while Queuers remain accountless and receive random ticket access tokens.
 
-Do not switch production back to the retired project ref `tjjvltvqzjgulgcknozk` unless there is an explicit disaster-recovery decision.
+## Data migration
 
-## 2026-08-11 migration record
+The Supabase production tables and Auth/Storage contained no live rows. Only the archive schema contained 5 prototype queues and 6 prototype tickets. A private one-time export preserves those 11 rows in `letsq_legacy`; row values and old device tokens are intentionally excluded from public source control. `neon/legacy-manifest.json` records the counts, while `neon/schema.sql` creates the new production schema.
 
-The new project originally contained an older prototype schema with 5 queues and 6 tickets. Those rows were preserved instead of deleted:
+Apply both SQL files to the existing Let’s Q Neon project in this order:
 
-- `letsq_legacy.queues`
-- `letsq_legacy.tickets`
+1. `neon/schema.sql`
+2. `neon/legacy-schema.sql`
+3. The private one-time legacy export held by the migration operator
 
-The legacy schema is not part of the app Data API surface. Anonymous/authenticated clients have no table access to it.
+Do not delete or pause the Supabase project until the Neon deployment and real-device smoke test pass.
 
-The current production schema was then installed in `public`, including Host-owned queues, token-authorized Queuer RPCs, ratings, billing entitlements, RLS, explicit Data API grants, queue-join serialization, and the unlimited-queue COUNT optimization.
+## Required Netlify secrets
 
-Additional hardening applied on 2026-08-11:
+- `DATABASE_URL`: pooled Neon connection string with SSL enabled
+- `RATE_LIMIT_SECRET`: at least 32 random bytes, used only for keyed abuse-prevention hashes
 
-- revoked broad automatic Data API table grants and adopted explicit least-privilege grants
-- revoked default public function execution for future functions
-- added FK indexes for `queues.owner_id` and `queue_staff.host_id`
-- normalized rating RPC parameters to standard integer JSON values while enforcing the 1–5 range
-- expanded the public queue/ticket RPCs so the production client can refresh a Queuer in one RPC rather than a ticket RPC plus a second queue RPC
-- added the production UI compatibility fields `event_name` and `accepting_entries`
-- enforced Host-selected no-show behavior in the database, including cancel, defer, timed hold, third-strike cancellation, and queue-close cleanup
-- fixed the hold transition so the Host UPDATE passes RLS before an unexpired hold becomes intentionally hidden from the Host waiting-list query
-- added explicit deny RLS policies to both archived legacy tables, in addition to their revoked client grants
-- verified anonymous clients cannot SELECT queue tables directly
-- verified public queue lookup, join, ticket status, cancellation, Host RLS updates, anonymous rating, hashed secret codes, no-show transitions, hidden hold behavior, queue close cleanup, and cleanup using synthetic test data
-- verified the report query surface under Host RLS using synthetic tickets and ratings, then removed all synthetic production rows
-- performance advisor returned no remaining lints after the fixes
-
-The `public` app tables were empty after the verification cleanup. The preserved prototype rows remain only in `letsq_legacy`.
-
-## Runtime cutover status
-
-**Completed on 2026-08-11.**
-
-- Supabase `Allow anonymous sign-ins` is enabled for `exqsdvzgoivacpqqdott`.
-- `runtime-config.js` and the legacy-named compatibility config both point to `exqsdvzgoivacpqqdott`.
-- The Supabase cutover was merged to `main` in commit `3d5faa2ac2e37a07d60ee2051807ad35cd2212df`.
-- The production-foundation GitHub Actions run on that merge commit completed successfully.
-
-The browser app creates a private Host identity using Supabase `signInAnonymously()`. Queuers remain accountless.
-
-Supabase recommends CAPTCHA/Turnstile for anonymous-sign-in abuse prevention. Add that protection before materially increasing public traffic.
-
-## Security-advisor notes
-
-Supabase may warn that the public Queuer RPCs are `SECURITY DEFINER` functions executable by `anon`/`authenticated`. This is intentional for this architecture: direct table access is denied, and these RPCs expose only narrow operations and limited projections. Ticket-specific operations require a random bearer `access_token`; queue discovery requires an unguessable public UUID or short join code.
-
-Supabase may also warn that authenticated/anonymous Host users can access owner-scoped `public` policies after anonymous sign-ins are enabled. This is expected: anonymous Host identities use the `authenticated` Postgres role and RLS limits them to their own Host-owned rows.
-
-The archived `letsq_legacy` tables have RLS enabled with explicit deny policies for `anon` and `authenticated`, and those roles also have no schema/table grants. They are retained only for recovery/history and are outside the app access path.
-
-Do not silence intentional warnings by granting anonymous table access.
+Never place either value in source, `runtime-config.js`, mobile assets, logs, or a public Netlify build variable.

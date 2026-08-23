@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 // Deterministic architecture simulation for Let’s Q.
-// This does NOT send traffic to production Supabase or AdMob. It models the
+// This does NOT send traffic to production Neon/Netlify or AdMob. It models the
 // queue invariants and request shape so scale reviews can be repeated safely.
 
 const hosts = Number(process.argv[2] || 100);
@@ -65,7 +65,7 @@ const result = {
     'Ticket uniqueness here models the database row-lock/counter design; it is not a production benchmark.',
     'RPC estimates assume every simulated Queuer is simultaneously viewing a live ticket with the app visible.',
     'Background/hidden clients now pause polling, so real steady-state request volume should be lower than this worst-case estimate.',
-    'Real database latency, contention, network jitter, retries, and Supabase plan limits require staging load tests.'
+    'Real database latency, contention, network jitter, retries, and Neon/Netlify plan limits require staging load tests.'
   ]
 };
 

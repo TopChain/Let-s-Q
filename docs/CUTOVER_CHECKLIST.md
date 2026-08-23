@@ -1,15 +1,13 @@
-# Supabase production cutover gate
+# Neon production cutover gate
 
-This branch makes Supabase project `exqsdvzgoivacpqqdott` the single Let’s Q queue backend.
+Before merging or publishing version 1.3.5:
 
-The current `app.html` still calls the legacy global `window.LetsQFirebase`; the source adapter in `scripts/firebase-browser-entry.js` now preserves that API name while routing every queue operation through Supabase. This avoids a risky 2 MB HTML rewrite and removes Firebase as the queue source of truth.
+1. Apply `neon/schema.sql`, `neon/legacy-schema.sql`, then the private legacy export to the existing Let’s Q Neon project.
+2. Save `DATABASE_URL` and a new 32-byte-or-longer `RATE_LIMIT_SECRET` as Netlify Function environment variables.
+3. Deploy the existing Let’s Q Netlify site and confirm the API health endpoint returns `ok`.
+4. In separate sessions, test Host creation/resume, join, call/serve, cancel, pause/resume, no-show, walk-in, rating, and report.
+5. Confirm GitHub Android and unsigned iOS simulator jobs pass.
+6. Test signed Android/iOS builds on real devices using the existing store signing identities.
+7. Verify the deployed privacy and deletion pages, Google Play Data safety, and App Store privacy answers.
 
-Before merging this branch:
-
-1. In Supabase project `exqsdvzgoivacpqqdott`, enable **Authentication → Allow anonymous sign-ins**. Queuers remain unauthenticated; a private anonymous Supabase identity is created lazily only when a device starts using Host features.
-2. Run `pnpm run web:build` (or the normal deployment build) so `vendor/firebase.js` is regenerated from the new Supabase compatibility source.
-3. Create one Host queue on a real browser/device, then open its QR/short code from a second private session. Confirm join, live status, call/serve, cancel, pause/resume, no-show, walk-in, and anonymous rating.
-4. Re-run Supabase security/performance advisors. Performance should have no actionable lints. Narrow SECURITY DEFINER Queuer RPC warnings are intentional and documented in `docs/PRODUCTION_BACKEND.md`.
-5. Only then merge/deploy this branch.
-
-Do not restore Firebase or `tjjvltvqzjgulgcknozk` as the default queue backend unless there is an explicit disaster-recovery decision.
+Keep Supabase as a temporary rollback source until all checks pass. Then it can be retired in a separate, explicitly approved action.

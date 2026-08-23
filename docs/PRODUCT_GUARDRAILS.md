@@ -12,15 +12,9 @@ This flow is the product. New features must make it faster, clearer, safer, or m
 
 ## Production backend record
 
-The intended production Supabase project for Let’s Q is:
+The production data store is the existing **Let’s Q** Neon project, accessed only through the Netlify API. The previous Supabase Let’s Q project is a temporary migration/rollback source and must not be treated as production after the Neon smoke test passes.
 
-- Project name: `Let's Q`
-- Project ref / ID: `exqsdvzgoivacpqqdott`
-- Region: `us-west-2`
-
-The older project ref `tjjvltvqzjgulgcknozk` is legacy and must not be treated as the production source of truth after the migration is completed and verified.
-
-Do not switch the app runtime configuration until the new project is healthy, the Let’s Q schema/migrations are applied, publishable API access is verified, and a live queue smoke test passes.
+Do not retire Supabase until the Neon schema and archive import, Netlify secrets/deploy, and a live queue smoke test are verified.
 
 ## Non-negotiables
 

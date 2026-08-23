@@ -15,9 +15,8 @@ const common = {
   logLevel: 'silent'
 };
 
-await build({ ...common, entryPoints: [resolve(root, 'scripts/supabase-browser-entry.js')], outfile: resolve(vendor, 'supabase.js') });
 // app.html still loads vendor/firebase.js for backward compatibility. The file
-// now bundles the Supabase queue adapter plus the live aggregate report runtime.
+// now bundles the Neon API adapter plus the live aggregate report runtime.
 await build({ ...common, entryPoints: [resolve(root, 'scripts/production-bridge-entry.js')], outfile: resolve(vendor, 'firebase.js') });
 await build({ ...common, entryPoints: [resolve(root, 'scripts/qr-browser-entry.js')], outfile: resolve(vendor, 'qrcode.js') });
 await build({ ...common, entryPoints: [resolve(root, 'scripts/qr-scanner-browser-entry.js')], outfile: resolve(vendor, 'qr-scanner.js') });

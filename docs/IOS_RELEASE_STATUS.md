@@ -1,8 +1,8 @@
-# iOS release status — 2026-08-11
+# iOS release status — 2026-08-22
 
 ## Core queue
 
-The iOS bundle ID is `app.letsq.queue`. The shared web runtime can use the canonical Supabase backend once the production cutover gate is completed.
+The iOS bundle ID is `com.letsq.app`, matching the existing App Store Connect record. Version 1.3.5 (build 2) uses the Neon-backed Let’s Q API after the production cutover gate is completed.
 
 ## Q Report monetization
 
@@ -20,7 +20,7 @@ Before charging for Q Report on iOS, implement an Apple-compliant in-app purchas
 
 The cutover branch adds `ios/App/App/PrivacyInfo.xcprivacy` and includes it in the Xcode app target. It declares the Let’s Q app’s own collection of anonymous Host user IDs, user-provided queue content, and product/queue interactions for app functionality and aggregate analytics. It declares no app-level tracking. Third-party SDK privacy manifests remain the responsibility of those SDK packages.
 
-App Store Connect privacy answers must remain consistent with the privacy manifest, the public privacy policy, Supabase behavior, and any SDKs added later.
+App Store Connect privacy answers must remain consistent with the privacy manifest, the public privacy policy, Neon/Netlify behavior, and any SDKs added later.
 
 Primary references:
 

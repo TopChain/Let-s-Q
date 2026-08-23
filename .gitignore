@@ -5,6 +5,7 @@
 *.jks
 *.keystore
 key.properties
+neon/legacy-data.private.sql
 
 # Local and generated development files.
 .DS_Store

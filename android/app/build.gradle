@@ -1,5 +1,10 @@
 apply plugin: 'com.android.application'
 
+def letsQUploadStoreFile = System.getenv('LETSQ_UPLOAD_STORE_FILE')
+def letsQUploadStorePassword = System.getenv('LETSQ_UPLOAD_STORE_PASSWORD')
+def letsQUploadKeyAlias = System.getenv('LETSQ_UPLOAD_KEY_ALIAS')
+def letsQUploadKeyPassword = System.getenv('LETSQ_UPLOAD_KEY_PASSWORD')
+
 // Keep Android Studio builds aligned with the source files at the project root.
 // This prevents a signed bundle from accidentally shipping a stale www/ copy.
 tasks.register('syncLetsQWebAssets', Copy) {
@@ -7,7 +12,7 @@ tasks.register('syncLetsQWebAssets', Copy) {
     from(letsQRoot) {
         include 'index.html', 'app.html', 'privacy.html', 'delete-data.html',
                 'runtime-config.js', 'app-ads.txt', 'i18n-extra.js', 'app-shell.js',
-                'live-queue.js', '_redirects', "Let's Q Web logo.jpeg",
+                '_redirects', "Let's Q Web logo.jpeg",
                 "Let's Q app logo.jpeg", 'queue-join-demo.svg',
                 'staff-pair-demo.svg', 'ticket-share-demo.svg'
     }
@@ -20,12 +25,22 @@ tasks.register('syncLetsQWebAssets', Copy) {
 android {
     namespace = "app.letsq.queue"
     compileSdk = rootProject.ext.compileSdkVersion
+    signingConfigs {
+        release {
+            if (letsQUploadStoreFile && letsQUploadStorePassword && letsQUploadKeyAlias && letsQUploadKeyPassword) {
+                storeFile file(letsQUploadStoreFile)
+                storePassword letsQUploadStorePassword
+                keyAlias letsQUploadKeyAlias
+                keyPassword letsQUploadKeyPassword
+            }
+        }
+    }
     defaultConfig {
         applicationId "app.letsq.queue"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 8
-        versionName "1.3.4"
+        versionCode 9
+        versionName "1.3.5"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -35,6 +50,9 @@ android {
     }
     buildTypes {
         release {
+            if (letsQUploadStoreFile && letsQUploadStorePassword && letsQUploadKeyAlias && letsQUploadKeyPassword) {
+                signingConfig signingConfigs.release
+            }
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }

@@ -2,7 +2,7 @@
  * Let’s Q app shell
  *
  * This layer turns the shared web/mobile UI into an app-shaped interface while
- * leaving the live Supabase queue bridge in charge of queue data.
+ * leaving the live Neon queue bridge in charge of queue data.
  */
 (() => {
   const state = window.letsQState;
