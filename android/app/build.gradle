@@ -1,5 +1,10 @@
 apply plugin: 'com.android.application'
 
+def letsQUploadStoreFile = System.getenv('LETSQ_UPLOAD_STORE_FILE')
+def letsQUploadStorePassword = System.getenv('LETSQ_UPLOAD_STORE_PASSWORD')
+def letsQUploadKeyAlias = System.getenv('LETSQ_UPLOAD_KEY_ALIAS')
+def letsQUploadKeyPassword = System.getenv('LETSQ_UPLOAD_KEY_PASSWORD')
+
 // Keep Android Studio builds aligned with the source files at the project root.
 // This prevents a signed bundle from accidentally shipping a stale www/ copy.
 tasks.register('syncLetsQWebAssets', Copy) {
@@ -20,6 +25,16 @@ tasks.register('syncLetsQWebAssets', Copy) {
 android {
     namespace = "app.letsq.queue"
     compileSdk = rootProject.ext.compileSdkVersion
+    signingConfigs {
+        release {
+            if (letsQUploadStoreFile && letsQUploadStorePassword && letsQUploadKeyAlias && letsQUploadKeyPassword) {
+                storeFile file(letsQUploadStoreFile)
+                storePassword letsQUploadStorePassword
+                keyAlias letsQUploadKeyAlias
+                keyPassword letsQUploadKeyPassword
+            }
+        }
+    }
     defaultConfig {
         applicationId "app.letsq.queue"
         minSdkVersion rootProject.ext.minSdkVersion
@@ -35,6 +50,9 @@ android {
     }
     buildTypes {
         release {
+            if (letsQUploadStoreFile && letsQUploadStorePassword && letsQUploadKeyAlias && letsQUploadKeyPassword) {
+                signingConfig signingConfigs.release
+            }
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
