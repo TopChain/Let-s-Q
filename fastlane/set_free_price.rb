@@ -32,10 +32,21 @@ def request(token, method, path, body = nil)
   [response.code.to_i, response.body.empty? ? {} : JSON.parse(response.body)]
 end
 
-schedule_status, = request(token, :get, "/v1/apps/#{APP_ID}/appPriceSchedule")
+schedule_status, schedule_body = request(token, :get, "/v1/apps/#{APP_ID}/appPriceSchedule")
 if schedule_status == 200
-  puts "An app price schedule already exists; keeping it unchanged."
-  exit 0
+  schedule_id = schedule_body.dig("data", "id")
+  manual_path = "/v1/appPriceSchedules/#{schedule_id}/manualPrices?fields%5BappPrices%5D=startDate,endDate&fields%5BappPricePoints%5D=customerPrice&include=appPricePoint&limit=200"
+  manual_status, manual_body = request(token, :get, manual_path)
+  if manual_status == 200
+    has_free_price = !manual_body.fetch("data", []).empty? &&
+      manual_body.fetch("included", []).any? do |resource|
+        resource["type"] == "appPricePoints" && resource.dig("attributes", "customerPrice").to_f.zero?
+      end
+    if has_free_price
+      puts "The existing app price schedule is already Free."
+      exit 0
+    end
+  end
 end
 
 price_path = "/v1/apps/#{APP_ID}/appPricePoints?filter%5Bterritory%5D=USA&fields%5BappPricePoints%5D=customerPrice&include=territory&limit=200"
