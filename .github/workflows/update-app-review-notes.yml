@@ -71,7 +71,7 @@ QUEUER REVIEW FLOW: On a second device, tap Queuer > scan the Host QR code or ma
 
 There is no account registration, login, or account deletion. Queuers are not asked for a name, phone number, email address, contacts, precise location, or social login. There is no public feed, messaging, or social user-generated content.
 
-Version 1.3.5 (2) has no iOS purchase, subscription, paid content, rewarded advertisement, AdMob SDK, or StoreKit flow. Q Report is available without charge on iOS.
+Version 1.3.5 (3) has no iOS purchase, subscription, paid content, rewarded advertisement, AdMob SDK, or StoreKit flow. Q Report is available without charge on iOS.
 
 PURPOSE AND AUDIENCE: Let’s Q replaces a physical line with a private digital queue for small businesses, event booths, pop-ups, pickup counters, service desks, and their guests. Hosts manage a deterministic first-come line; Queuers can hold their place and wait elsewhere.
 
@@ -81,7 +81,7 @@ REGIONS: Core functions are identical in every offered territory; queue dates/ho
 
 REGULATED/PROTECTED CONTENT: Not applicable. This is a general-purpose queue utility and provides no regulated service or protected third-party media.
 
-TESTING: TestFlight build 1.3.5 (2) was opened on a physical iPhone. The signed App Store archive was produced with Xcode 26 and the iOS 26 SDK. Automated tests verified queue creation, anonymous join, call, arrival, service completion, rating, QR deep links, Host relaunch recovery, and backend cleanup. The exact recording-device model and iOS build will accompany the physical-device recording link in Resolution Center.`;
+TESTING: Build 1.3.5 (3) was compiled with Xcode 26 and the iOS 26 SDK. Automated tests verified queue creation, anonymous join, call, arrival, service completion, rating, QR deep links, Host relaunch recovery, backend cleanup, iOS safe-area layout, bottom navigation placement, and the no-fill Let’s Q tip banner. The physical-device screen recording and its exact device model/iOS build are being prepared and will be supplied separately in Resolution Center.`;
 
           const apps = await api('/v1/apps?filter%5BbundleId%5D=com.letsq.app&limit=5');
           if (!apps.data?.length) throw new Error('Let’s Q app record was not found.');
