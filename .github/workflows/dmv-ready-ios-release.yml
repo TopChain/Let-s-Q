@@ -41,7 +41,7 @@ jobs:
           npx expo prebuild --clean --platform ios --no-install
           npx pod-install ios
           /usr/libexec/PlistBuddy -c 'Set :CFBundleShortVersionString 1.3.0' ios/DMVTestPrep/Info.plist
-          /usr/libexec/PlistBuddy -c 'Set :CFBundleVersion 3' ios/DMVTestPrep/Info.plist
+          /usr/libexec/PlistBuddy -c 'Set :CFBundleVersion 4' ios/DMVTestPrep/Info.plist
 
       - name: Install the authorized Apple signing identity and API key
         env:
@@ -145,21 +145,21 @@ jobs:
             -authenticationKeyID "$APP_STORE_CONNECT_API_KEY_ID" \
             -authenticationKeyIssuerID "$APP_STORE_CONNECT_API_KEY_ISSUER_ID"
           mkdir -p release
-          cp "$RUNNER_TEMP/DMVReadyExport"/*.ipa release/DMV-Ready-1.3.0-3.ipa
+          cp "$RUNNER_TEMP/DMVReadyExport"/*.ipa release/DMV-Ready-1.3.0-4.ipa
           xcrun altool --validate-app \
-            -f release/DMV-Ready-1.3.0-3.ipa \
+            -f release/DMV-Ready-1.3.0-4.ipa \
             -t ios \
             --apiKey "$APP_STORE_CONNECT_API_KEY_ID" \
             --apiIssuer "$APP_STORE_CONNECT_API_KEY_ISSUER_ID"
           xcrun altool --upload-app \
-            -f release/DMV-Ready-1.3.0-3.ipa \
+            -f release/DMV-Ready-1.3.0-4.ipa \
             -t ios \
             --apiKey "$APP_STORE_CONNECT_API_KEY_ID" \
             --apiIssuer "$APP_STORE_CONNECT_API_KEY_ISSUER_ID"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: dmv-ready-ios-1.3.0-3
-          path: release/DMV-Ready-1.3.0-3.ipa
+          name: dmv-ready-ios-1.3.0-4
+          path: release/DMV-Ready-1.3.0-4.ipa
           if-no-files-found: error
           retention-days: 14
