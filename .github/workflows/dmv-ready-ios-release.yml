@@ -71,6 +71,32 @@ jobs:
           security list-keychain -d user -s "$KEYCHAIN_PATH"
           echo "API_KEY_PATH=$API_KEY_PATH" >> "$GITHUB_ENV"
 
+      - name: Create and install the DMV Ready App Store profile
+        env:
+          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_API_KEY_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
+        run: |
+          API_KEY_JSON_PATH="$RUNNER_TEMP/app-store-connect-api-key.json"
+          jq -n \
+            --arg key_id "$APP_STORE_CONNECT_API_KEY_ID" \
+            --arg issuer_id "$APP_STORE_CONNECT_API_KEY_ISSUER_ID" \
+            --arg key "$(cat "$API_KEY_PATH")" \
+            '{key_id: $key_id, issuer_id: $issuer_id, key: $key}' > "$API_KEY_JSON_PATH"
+          chmod 600 "$API_KEY_JSON_PATH"
+          fastlane sigh \
+            --api_key_path "$API_KEY_JSON_PATH" \
+            --app_identifier com.topchainfresh.dmvready \
+            --output_path "$RUNNER_TEMP" \
+            --filename DMVReady_AppStore.mobileprovision
+          PROFILE_PATH="$RUNNER_TEMP/DMVReady_AppStore.mobileprovision"
+          PROFILE_PLIST="$RUNNER_TEMP/DMVReady_AppStore.plist"
+          security cms -D -i "$PROFILE_PATH" > "$PROFILE_PLIST"
+          PROFILE_UUID="$(/usr/libexec/PlistBuddy -c 'Print :UUID' "$PROFILE_PLIST")"
+          PROFILE_NAME="$(/usr/libexec/PlistBuddy -c 'Print :Name' "$PROFILE_PLIST")"
+          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
+          cp "$PROFILE_PATH" "$HOME/Library/MobileDevice/Provisioning Profiles/$PROFILE_UUID.mobileprovision"
+          echo "PROFILE_NAME=$PROFILE_NAME" >> "$GITHUB_ENV"
+
       - name: Archive DMV Ready
         env:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
@@ -88,9 +114,9 @@ jobs:
             -destination 'generic/platform=iOS' \
             -archivePath "$RUNNER_TEMP/DMVReady.xcarchive" \
             DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
-            CODE_SIGN_STYLE=Automatic \
+            CODE_SIGN_STYLE=Manual \
             CODE_SIGN_IDENTITY='Apple Distribution' \
-            -allowProvisioningUpdates \
+            PROVISIONING_PROFILE_SPECIFIER="$PROFILE_NAME" \
             -authenticationKeyPath "$API_KEY_PATH" \
             -authenticationKeyID "$APP_STORE_CONNECT_API_KEY_ID" \
             -authenticationKeyIssuerID "$APP_STORE_CONNECT_API_KEY_ISSUER_ID"
