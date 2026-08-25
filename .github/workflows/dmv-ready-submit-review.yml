@@ -1,0 +1,52 @@
+name: Submit DMV Ready to Apple review
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  submit-review:
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - name: Prepare the authorized App Store Connect API key
+        env:
+          APP_STORE_CONNECT_API_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}
+          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_API_KEY_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
+        run: |
+          test "$APP_STORE_CONNECT_API_KEY_ID" = 'S2V3848CV2'
+          test -n "$APP_STORE_CONNECT_API_KEY_BASE64"
+          test -n "$APP_STORE_CONNECT_API_KEY_ISSUER_ID"
+          API_KEY_PATH="$RUNNER_TEMP/AuthKey_$APP_STORE_CONNECT_API_KEY_ID.p8"
+          API_KEY_JSON_PATH="$RUNNER_TEMP/app-store-connect-api-key.json"
+          printf '%s' "$APP_STORE_CONNECT_API_KEY_BASE64" | base64 --decode > "$API_KEY_PATH"
+          chmod 600 "$API_KEY_PATH"
+          jq -n \
+            --arg key_id "$APP_STORE_CONNECT_API_KEY_ID" \
+            --arg issuer_id "$APP_STORE_CONNECT_API_KEY_ISSUER_ID" \
+            --arg key "$(cat "$API_KEY_PATH")" \
+            '{key_id: $key_id, issuer_id: $issuer_id, key: $key, in_house: false}' > "$API_KEY_JSON_PATH"
+          chmod 600 "$API_KEY_JSON_PATH"
+          echo "API_KEY_JSON_PATH=$API_KEY_JSON_PATH" >> "$GITHUB_ENV"
+
+      - name: Select build 3 and submit version 1.3.0 for review
+        env:
+          FASTLANE_SKIP_UPDATE_CHECK: 'true'
+          FASTLANE_OPT_OUT_USAGE: 'true'
+        run: |
+          fastlane deliver \
+            --api_key_path "$API_KEY_JSON_PATH" \
+            --app_identifier com.topchainfresh.dmvready \
+            --app_version 1.3.0 \
+            --build_number 3 \
+            --skip_binary_upload true \
+            --skip_metadata true \
+            --skip_screenshots true \
+            --submit_for_review true \
+            --automatic_release true \
+            --force true \
+            --precheck_include_in_app_purchases false \
+            --submission_information '{"add_id_info_uses_idfa":true,"add_id_info_serves_ads":true,"add_id_info_tracks_action":true,"add_id_info_tracks_install":true,"add_id_info_limits_tracking":true,"content_rights_contains_third_party_content":false,"content_rights_has_rights":true,"export_compliance_uses_encryption":false,"export_compliance_is_exempt":true}'
