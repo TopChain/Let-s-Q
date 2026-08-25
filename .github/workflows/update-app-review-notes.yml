@@ -17,7 +17,7 @@ jobs:
           ASC_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}
         run: |
           node <<'NODE'
-          const crypto = require('node:crypto');
+          const crypto = await import('node:crypto');
 
           const required = ['ASC_ISSUER_ID', 'ASC_KEY_ID', 'ASC_KEY_BASE64'];
           for (const name of required) {
