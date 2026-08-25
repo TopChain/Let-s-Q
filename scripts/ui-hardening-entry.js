@@ -29,6 +29,36 @@ function isNativeIos() {
   }
 }
 
+function installIosViewportLayout() {
+  if (!isNativeIos() || document.getElementById('letsq-ios-viewport-fix')) return;
+  const style = document.createElement('style');
+  style.id = 'letsq-ios-viewport-fix';
+  style.textContent = `
+    :root{--safe-top:env(safe-area-inset-top,0px);--safe-bottom:max(14px,env(safe-area-inset-bottom));--ios-nav-height:calc(66px + var(--safe-bottom));--ios-promo-height:58px}
+    html,body{width:100%!important;height:100%!important;min-height:100%!important;overflow:hidden!important}
+    .desktop-wrap{position:fixed!important;inset:0!important;display:block!important;min-height:0!important;padding:0!important;background:var(--cloud)!important}
+    .brand-board{display:none!important}.phone{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;height:100dvh!important;min-height:0!important;border:0!important;border-radius:0!important;max-width:none!important;overflow:hidden!important}.phone:before{display:none!important}
+    .app-shell{height:100%!important;height:100dvh!important;min-height:0!important}.topbar{flex:0 0 112px!important;padding-top:calc(10px + var(--safe-top))!important}.content{min-height:0!important;padding-bottom:calc(var(--ios-nav-height) + var(--ios-promo-height) + 24px)!important}
+    .bottom-nav{position:fixed!important;top:auto!important;bottom:0!important;left:0!important;right:0!important;height:var(--ios-nav-height)!important;padding:8px max(8px,env(safe-area-inset-right)) var(--safe-bottom) max(8px,env(safe-area-inset-left))!important;align-items:end!important}
+    .ad-banner{position:fixed!important;top:auto!important;left:8px!important;right:8px!important;bottom:var(--ios-nav-height)!important;min-height:var(--ios-promo-height)!important;border-radius:16px 16px 0 0!important;background:linear-gradient(110deg,#eaf4ff,#f0fdfa)!important;color:#0f2a57!important;border:1px solid #bfdbfe!important;box-shadow:0 -8px 20px #0f172a14!important}
+    .ad-banner .ad-badge{background:#dbeafe!important;color:#075fe3!important}.ad-banner .ad-copy span{color:#475569!important}.ad-banner .ad-close{background:#fff!important;color:#075fe3!important;border:1px solid #bfdbfe!important}
+    .toast{position:fixed!important;bottom:calc(var(--ios-nav-height) + var(--ios-promo-height) + 12px)!important}.modal-backdrop,.full-ad{position:fixed!important}
+  `;
+  document.head.append(style);
+}
+
+function replaceIosAdFallback() {
+  if (!isNativeIos()) return;
+  clearInterval(window.letsQAdTimer);
+  document.getElementById('fullAd')?.classList.remove('show');
+  const banner = document.getElementById('stickyAdBanner');
+  if (!banner) return;
+  banner.setAttribute('aria-label', 'Let’s Q tip');
+  banner.innerHTML = '<span class="ad-badge">LET’S Q TIP</span><div class="ad-copy"><b>Hosts: show the queue QR at your counter</b><span>Queuers can scan or enter the short code — no account required.</span></div><button class="ad-close" onclick="showToast(\'Let’s Q uses this space for helpful tips when no ad is available.\')">ⓘ</button>';
+}
+
+installIosViewportLayout();
+
 function ensureWebAdShell() {
   if (window.Capacitor?.isNativePlatform?.()) return;
   const nav = document.querySelector('.bottom-nav');
@@ -167,6 +197,8 @@ function hardenCancelModal() {
 }
 
 window.addEventListener('load', () => {
+  installIosViewportLayout();
+  replaceIosAdFallback();
   ensureWebAdShell();
   resumeInterruptedStartup();
   hideUnimplementedControls();
