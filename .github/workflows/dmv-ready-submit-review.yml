@@ -11,6 +11,8 @@ jobs:
     runs-on: macos-latest
     timeout-minutes: 45
     steps:
+      - uses: actions/checkout@v4
+
       - name: Prepare the authorized App Store Connect API key
         env:
           APP_STORE_CONNECT_API_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}
