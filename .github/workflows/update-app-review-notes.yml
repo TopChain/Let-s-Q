@@ -1,0 +1,111 @@
+name: Update App Store review notes
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  update-review-notes:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Update version 1.3.5 review notes
+        env:
+          ASC_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          ASC_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}
+        run: |
+          node <<'NODE'
+          const crypto = require('node:crypto');
+
+          const required = ['ASC_ISSUER_ID', 'ASC_KEY_ID', 'ASC_KEY_BASE64'];
+          for (const name of required) {
+            if (!process.env[name]) throw new Error(`Missing GitHub secret: ${name}`);
+          }
+
+          const base64url = value => Buffer.from(value)
+            .toString('base64')
+            .replace(/=/g, '')
+            .replace(/\+/g, '-')
+            .replace(/\//g, '_');
+
+          const now = Math.floor(Date.now() / 1000);
+          const header = base64url(JSON.stringify({ alg: 'ES256', kid: process.env.ASC_KEY_ID, typ: 'JWT' }));
+          const payload = base64url(JSON.stringify({
+            iss: process.env.ASC_ISSUER_ID,
+            iat: now,
+            exp: now + 900,
+            aud: 'appstoreconnect-v1'
+          }));
+          const unsignedToken = `${header}.${payload}`;
+          const privateKey = Buffer.from(process.env.ASC_KEY_BASE64, 'base64').toString('utf8');
+          const signature = crypto.sign('sha256', Buffer.from(unsignedToken), {
+            key: privateKey,
+            dsaEncoding: 'ieee-p1363'
+          });
+          const token = `${unsignedToken}.${base64url(signature)}`;
+
+          async function api(path, options = {}) {
+            const response = await fetch(`https://api.appstoreconnect.apple.com${path}`, {
+              ...options,
+              headers: {
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json',
+                ...(options.headers || {})
+              }
+            });
+            const text = await response.text();
+            const body = text ? JSON.parse(text) : null;
+            if (!response.ok) {
+              throw new Error(`${options.method || 'GET'} ${path} failed (${response.status}): ${text}`);
+            }
+            return body;
+          }
+
+          const notes = `No login is required. Let’s Q has two roles in one app.
+
+HOST REVIEW FLOW: Tap Host > enter a booth/event name and queue name > set queue dates/hours and a no-show rule > tap Start this queue > display the QR code or six-character join code.
+
+QUEUER REVIEW FLOW: On a second device, tap Queuer > scan the Host QR code or manually enter the six-character code > choose a private passphrase > tap Join queue. On the Host device, call the ticket, confirm arrival, and complete service. The Queuer may then submit an anonymous rating. Camera access is optional because manual code entry provides the complete flow.
+
+There is no account registration, login, or account deletion. Queuers are not asked for a name, phone number, email address, contacts, precise location, or social login. There is no public feed, messaging, or social user-generated content.
+
+Version 1.3.5 (2) has no iOS purchase, subscription, paid content, rewarded advertisement, AdMob SDK, or StoreKit flow. Q Report is available without charge on iOS.
+
+PURPOSE AND AUDIENCE: Let’s Q replaces a physical line with a private digital queue for small businesses, event booths, pop-ups, pickup counters, service desks, and their guests. Hosts manage a deterministic first-come line; Queuers can hold their place and wait elsewhere.
+
+EXTERNAL SERVICES: Netlify server-side API and Neon PostgreSQL over HTTPS. Capacitor packages the iOS app. Database credentials are never included in the app. The iOS build does not include Supabase, Firebase, third-party analytics SDKs, Google Mobile Ads, Google Play Billing, StoreKit, or third-party authentication.
+
+REGIONS: Core functions are identical in every offered territory; queue dates/hours use local device time. Languages: English, Spanish, Traditional Chinese, Simplified Chinese, Japanese, and Korean.
+
+REGULATED/PROTECTED CONTENT: Not applicable. This is a general-purpose queue utility and provides no regulated service or protected third-party media.
+
+TESTING: TestFlight build 1.3.5 (2) was opened on a physical iPhone. The signed App Store archive was produced with Xcode 26 and the iOS 26 SDK. Automated tests verified queue creation, anonymous join, call, arrival, service completion, rating, QR deep links, Host relaunch recovery, and backend cleanup. The exact recording-device model and iOS build will accompany the physical-device recording link in Resolution Center.`;
+
+          const apps = await api('/v1/apps?filter%5BbundleId%5D=com.letsq.app&limit=5');
+          if (!apps.data?.length) throw new Error('Let’s Q app record was not found.');
+          const appId = apps.data[0].id;
+
+          const versions = await api(`/v1/apps/${appId}/appStoreVersions?filter%5Bplatform%5D=IOS&filter%5BversionString%5D=1.3.5&limit=10`);
+          if (!versions.data?.length) throw new Error('iOS version 1.3.5 was not found.');
+          const version = versions.data.find(item => item.attributes?.versionString === '1.3.5') || versions.data[0];
+
+          const detail = await api(`/v1/appStoreVersions/${version.id}/appStoreReviewDetail`);
+          if (!detail.data?.id) throw new Error('App Store review detail was not found.');
+
+          await api(`/v1/appStoreReviewDetails/${detail.data.id}`, {
+            method: 'PATCH',
+            body: JSON.stringify({
+              data: {
+                type: 'appStoreReviewDetails',
+                id: detail.data.id,
+                attributes: { notes }
+              }
+            })
+          });
+
+          const verified = await api(`/v1/appStoreReviewDetails/${detail.data.id}`);
+          if (verified.data?.attributes?.notes !== notes) throw new Error('Review notes verification failed.');
+          console.log(`Updated and verified App Review Notes for iOS ${version.attributes?.versionString || '1.3.5'}.`);
+          NODE
