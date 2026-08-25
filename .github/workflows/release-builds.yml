@@ -163,7 +163,7 @@ jobs:
             -authenticationKeyID "$APP_STORE_CONNECT_API_KEY_ID" \
             -authenticationKeyIssuerID "$APP_STORE_CONNECT_API_ISSUER_ID"
           mkdir -p release
-          cp "$RUNNER_TEMP/LetsQExport"/*.ipa release/LetsQ-1.3.5-2.ipa
+          cp "$RUNNER_TEMP/LetsQExport"/*.ipa release/LetsQ-1.3.5-3.ipa
       - name: Upload build to App Store Connect
         env:
           APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
@@ -173,18 +173,18 @@ jobs:
           test -n "$APP_STORE_CONNECT_API_ISSUER_ID"
           test -f "$API_KEY_PATH"
           xcrun altool --validate-app \
-            -f release/LetsQ-1.3.5-2.ipa \
+            -f release/LetsQ-1.3.5-3.ipa \
             -t ios \
             --apiKey "$APP_STORE_CONNECT_API_KEY_ID" \
             --apiIssuer "$APP_STORE_CONNECT_API_ISSUER_ID"
           xcrun altool --upload-app \
-            -f release/LetsQ-1.3.5-2.ipa \
+            -f release/LetsQ-1.3.5-3.ipa \
             -t ios \
             --apiKey "$APP_STORE_CONNECT_API_KEY_ID" \
             --apiIssuer "$APP_STORE_CONNECT_API_ISSUER_ID"
       - uses: actions/upload-artifact@v4
         with:
-          name: lets-q-ios-1.3.5-2
-          path: release/LetsQ-1.3.5-2.ipa
+          name: lets-q-ios-1.3.5-3
+          path: release/LetsQ-1.3.5-3.ipa
           if-no-files-found: error
           retention-days: 14

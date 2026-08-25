@@ -76,6 +76,9 @@ if (!hardeningSource.includes('resumeInterruptedStartup')) throw new Error('A fa
 if (!hardeningSource.includes('hideUnsupportedTicketSharing')) throw new Error('The release can still expose the prototype ticket-sharing flow.');
 if (!hardeningSource.includes("style.setProperty('display', 'none', 'important')")) throw new Error('Author styles can still override hidden production controls.');
 if (!hardeningSource.includes('hardenCancelModal')) throw new Error('The cancel confirmation can still display a fake ticket number.');
+if (!hardeningSource.includes('installIosViewportLayout')) throw new Error('The iOS viewport layout fix is not bundled.');
+if (!hardeningSource.includes('position:fixed!important;top:auto!important;bottom:0!important')) throw new Error('The iOS navigation is not pinned to the bottom viewport edge.');
+if (!hardeningSource.includes('replaceIosAdFallback')) throw new Error('The iOS no-fill Let’s Q tip fallback is not bundled.');
 if (!hardeningSource.includes("type === 'staff' || type === 'settings' || type === 'share'")) throw new Error('The prototype share modal is not blocked.');
 
 if (!bridgeSource.includes("apiRequest('get-ticket'")) throw new Error('Queuer polling is not using the Neon ticket endpoint.');
@@ -123,7 +126,7 @@ for (const marker of ['LETSQ_UPLOAD_STORE_FILE', 'LETSQ_UPLOAD_STORE_PASSWORD', 
   if (!androidGradle.includes(marker)) throw new Error(`Android release signing is missing ${marker}.`);
 }
 const releaseWorkflow = readFileSync(resolve(root, '.github/workflows/release-builds.yml'), 'utf8');
-for (const marker of ['bundleRelease', 'app-release.aab', 'xcodebuild archive', 'LetsQ-1.3.5-2.ipa']) {
+for (const marker of ['bundleRelease', 'app-release.aab', 'xcodebuild archive', 'LetsQ-1.3.5-3.ipa']) {
   if (!releaseWorkflow.includes(marker)) throw new Error(`The signed store-build workflow is missing ${marker}.`);
 }
 
